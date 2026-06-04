@@ -1,9 +1,8 @@
 from pathlib import Path
 import sqlite3
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-
 
 BASE_DIR = Path(__file__).resolve().parent
 DB_PATH = BASE_DIR / "hr_portal.db"
@@ -223,6 +222,21 @@ def startup():
 @app.get("/api/health")
 def health():
     return {"ok": True}
+
+
+# Unifies search bar mapping seamlessly for your React Header
+@app.get("/api/search")
+def search_system(query: str = Query(..., min_length=1)):
+    search_pattern = f"%{query}%"
+    return rows(
+        """
+        SELECT id, name as firstName, '' as lastName, department as email, qual as highestQualification 
+        FROM candidates 
+        WHERE name LIKE ? OR department LIKE ?
+        LIMIT 8
+        """, 
+        (search_pattern, search_pattern)
+    )
 
 
 @app.get("/api/candidates")
