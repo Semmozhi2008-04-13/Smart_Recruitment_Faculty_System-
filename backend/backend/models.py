@@ -9,7 +9,7 @@ import os
 # Add parent directory to path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from backend.database import Base
+from .database.connection import Base
 
 class Job(Base):
     __tablename__ = "jobs"

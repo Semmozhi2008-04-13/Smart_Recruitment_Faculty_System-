@@ -1,31 +1,37 @@
+from __future__ import annotations
+
+import os
+from dotenv import load_dotenv
+
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-import os
-from dotenv import load_dotenv
+
 import psycopg2
 
-# Load environment variables
 load_dotenv()
 
-# Database configuration
 DB_CONFIG = {
     "host": os.getenv("DB_HOST", "localhost"),
     "port": os.getenv("DB_PORT", "3000"),
     "database": os.getenv("DB_NAME", "recruitment_system"),
     "user": os.getenv("DB_USER", "postgres"),
-    "password": os.getenv("DB_PASSWORD", "2008semo13")
+    "password": os.getenv("DB_PASSWORD", "2008semo13"),
 }
 
-# SQLAlchemy connection string
-DATABASE_URL = f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+DATABASE_URL = (
+    f"postgresql://{DB_CONFIG['user']}:{DB_CONFIG['password']}@"
+    f"{DB_CONFIG['host']}:{DB_CONFIG['port']}/{DB_CONFIG['database']}"
+)
 
-# Create engine
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Dependency to get DB session
+# NOTE: main.py currently expects async SQLAlchemy (AsyncSession + async dependency).
+# To keep the project runnable without cascading async refactors right now,
+# we expose sync get_db and a compatible alias.
+
 def get_db():
     db = SessionLocal()
     try:
@@ -33,7 +39,10 @@ def get_db():
     finally:
         db.close()
 
-# Test connection function
+# Compatibility alias expected by imports.
+AsyncSessionLocal = SessionLocal
+
+
 def test_connection():
     try:
         conn = psycopg2.connect(**DB_CONFIG)
@@ -43,3 +52,4 @@ def test_connection():
     except Exception as e:
         print(f"❌ Connection failed: {e}")
         return False
+

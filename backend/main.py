@@ -1,17 +1,19 @@
 # backend/main.py
 from __future__ import annotations
 
+
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 from pydantic import BaseModel
 from typing import Optional, List
 
-from backend.backend.database import get_db, engine, Base, AsyncSessionLocal
+from backend.backend.database import get_db, engine, Base
+from datetime import datetime
 from backend.backend.models import (
-    Job, 
-    Candidate, 
+    Job,
+    Candidate,
     JobApplication,  # Now this exists
     Interview,
     Evaluation,
@@ -21,8 +23,21 @@ from backend.backend.models import (
     CandidateSkill,
     ResearchPaper,
     InterviewPanel,
-    Notification
+    Notification,
 )
+
+
+class JobCreateRequest(BaseModel):
+    jobTitle: str
+    department: str
+    specialization: Optional[str] = None
+    qualifications: Optional[str] = None
+    salary: Optional[str] = None
+    minExperience: Optional[str] = None
+    vacancies: int = 1
+    startDate: Optional[str] = None
+    endDate: Optional[str] = None
+    status: str = "DRAFT"
 
 app = FastAPI(title="Smart Faculty Recruitment System API")
 
@@ -40,9 +55,11 @@ app.add_middleware(
 # ============================================
 @app.on_event("startup")
 async def on_startup():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    print("Database tables created/verified on port 3000!")
+    # backend/backend/database/connection.py exposes a *sync* engine.
+    # Use sync table creation.
+    with engine.begin() as conn:
+        Base.metadata.create_all(bind=conn)
+    print("Database tables created/verified!")
 
 # ============================================
 # HEALTH CHECK
@@ -78,6 +95,55 @@ async def get_dashboard_stats(session: AsyncSession = Depends(get_db)):
 # ============================================
 # JOBS ENDPOINTS
 # ============================================
+
+@app.post("/api/jobs")
+async def create_job(payload: JobCreateRequest, session: AsyncSession = Depends(get_db)):
+    """Create a job vacancy (frontend: JobManagementImpl.jsx -> POST /api/jobs)."""
+    if payload.vacancies is None or payload.vacancies <= 0:
+        raise HTTPException(status_code=400, detail="vacancies must be > 0")
+
+    position_name = payload.jobTitle.strip()
+    department = payload.department.strip()
+    if not position_name or not department:
+        raise HTTPException(status_code=400, detail="jobTitle and department are required")
+
+    job = Job(
+        job_code=None,
+        position_name=position_name,
+        department=department,
+        vacancies=payload.vacancies,
+        # frontend doesn't provide applications_received directly
+        applications_received=0,
+        status=payload.status,
+        description=payload.qualifications,
+        qualifications_required=payload.qualifications,
+        experience_required=None,
+        min_salary=None,
+        max_salary=None,
+        # posted_date/closing_date are Date in models; keep simple parsing for ISO yyyy-mm-dd
+        posted_date=None,
+        closing_date=None,
+    )
+
+    if payload.startDate:
+        try:
+            job.posted_date = datetime.fromisoformat(payload.startDate).date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="startDate must be in YYYY-MM-DD format")
+
+    if payload.endDate:
+        try:
+            job.closing_date = datetime.fromisoformat(payload.endDate).date()
+        except ValueError:
+            raise HTTPException(status_code=400, detail="endDate must be in YYYY-MM-DD format")
+
+    async with session.begin():
+        session.add(job)
+
+    # After commit, id should be available
+    return {"success": True, "job_id": job.id}
+
+
 @app.get("/api/jobs")
 async def get_jobs(session: AsyncSession = Depends(get_db)):
     """Get all jobs"""
@@ -265,6 +331,6 @@ if __name__ == "__main__":
     uvicorn.run(
         "backend.main:app",
         host="0.0.0.0",
-        port=8000,
+        port=5001,
         reload=True
     )
