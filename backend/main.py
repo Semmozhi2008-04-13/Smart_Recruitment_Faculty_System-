@@ -1,23 +1,17 @@
 # backend/main.py
 from __future__ import annotations
 
-from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 from sqlalchemy import select, func, delete
 from pydantic import BaseModel
-from typing import Optional, List
-from datetime import datetime, date, timedelta
+from typing import Optional
+from datetime import datetime, timedelta
 
-<<<<<<< HEAD
-from backend.database import get_db, engine, Base
-from datetime import datetime
-from backend.models import (
-=======
-from backend.backend.database import get_db, engine, Base, AsyncSessionLocal
+from backend.backend.database.connection import get_db, engine, Base, AsyncSessionLocal
 from backend.backend.models import (
->>>>>>> bf2fb1f2ad443d0a5a72d7661dc8b50a8067e620
     Job,
     Candidate,
     JobApplication,
@@ -45,6 +39,8 @@ class JobCreateRequest(BaseModel):
     startDate: Optional[str] = None
     endDate: Optional[str] = None
     status: str = "DRAFT"
+
+
 class CandidateCreateRequest(BaseModel):
     firstName: str
     lastName: str
@@ -54,71 +50,56 @@ class CandidateCreateRequest(BaseModel):
     qualification: Optional[str] = None
     specialization: Optional[str] = None
 
-class InterviewCreateRequest(BaseModel):
-    candidateId: int
-    jobId: int
-    interviewType: str
-    interviewDate: str  # ISO format
-    interviewRound: Optional[int] = 1
-    interviewers: Optional[str] = None
-    mode: Optional[str] = "online"
-    meetingLink: Optional[str] = None
 
 class EvaluationCreateRequest(BaseModel):
     candidateId: int
     jobApplicationId: int
-    aiScore: Optional[float]
-    technicalScore: Optional[float]
-    researchScore: Optional[float]
-    finalScore: Optional[float]
+    aiScore: Optional[float] = None
+    technicalScore: Optional[float] = None
+    researchScore: Optional[float] = None
+    finalScore: Optional[float] = None
 
-class OfferCreateRequest(BaseModel):
-    candidateId: int
-    position: str
-    salary: float
-    joiningDate: str
-    # PDF placeholder – will just return a static URL
+
 class SelectionDecisionRequest(BaseModel):
     decision: str  # "Selected" or "Rejected"
 
+
 app = FastAPI(title="Smart Faculty Recruitment System API")
 
-# CORS for React frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:3000", "http://localhost:5174"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:3000",
+        "http://localhost:5174",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ============================================
-# STARTUP - Create Tables & Seed Data
-# ============================================
+
 @app.on_event("startup")
 async def on_startup():
     async with engine.begin() as conn:
         from sqlalchemy import text
-        # Cascade drop the public schema to clean all old tables and constraint dependencies
+
         await conn.execute(text("DROP SCHEMA IF EXISTS public CASCADE;"))
         await conn.execute(text("CREATE SCHEMA public;"))
         await conn.execute(text("GRANT ALL ON SCHEMA public TO public;"))
         await conn.run_sync(Base.metadata.create_all)
-    print("Database tables recreated and verified!")
 
     async with AsyncSessionLocal() as session:
         await seed_data_if_empty(session)
 
+
 async def seed_data_if_empty(session: AsyncSession):
-    # Check if we already have candidates
     result = await session.execute(select(Candidate))
     if result.scalars().first() is not None:
-        print("Database already has data. Skipping seed.")
         return
 
-    print("Seeding initial data into database...")
-
-    # 1. Create Skills
     skills = [
         Skill(skill_name="Python", category="Programming"),
         Skill(skill_name="React", category="Frontend"),
@@ -130,7 +111,6 @@ async def seed_data_if_empty(session: AsyncSession):
     session.add_all(skills)
     await session.flush()
 
-    # 2. Create Jobs
     job_cse = Job(
         job_code="JOB-CSE-001",
         position_name="Assistant Professor",
@@ -143,7 +123,7 @@ async def seed_data_if_empty(session: AsyncSession):
         min_salary=1200000.00,
         max_salary=1800000.00,
         posted_date=datetime.now().date(),
-        status="PUBLISHED"
+        status="PUBLISHED",
     )
     job_ece = Job(
         job_code="JOB-ECE-002",
@@ -157,12 +137,11 @@ async def seed_data_if_empty(session: AsyncSession):
         min_salary=1100000.00,
         max_salary=1600000.00,
         posted_date=datetime.now().date(),
-        status="PUBLISHED"
+        status="PUBLISHED",
     )
     session.add_all([job_cse, job_ece])
     await session.flush()
 
-    # 3. Create Candidates
     c1 = Candidate(
         candidate_code="CAN-RS-001",
         first_name="Reena",
@@ -175,9 +154,8 @@ async def seed_data_if_empty(session: AsyncSession):
         ai_score=94.0,
         skills_match_percentage=95.0,
         research_score=92.0,
-        application_status="shortlisted"
+        application_status="shortlisted",
     )
-
     c2 = Candidate(
         candidate_code="CAN-LC-002",
         first_name="Liam",
@@ -190,9 +168,8 @@ async def seed_data_if_empty(session: AsyncSession):
         ai_score=92.0,
         skills_match_percentage=90.0,
         research_score=85.0,
-        application_status="interviewed"
+        application_status="interviewed",
     )
-
     c3 = Candidate(
         candidate_code="CAN-PS-003",
         first_name="Priya",
@@ -205,9 +182,8 @@ async def seed_data_if_empty(session: AsyncSession):
         ai_score=96.0,
         skills_match_percentage=97.0,
         research_score=94.0,
-        application_status="selected"
+        application_status="selected",
     )
-
     c4 = Candidate(
         candidate_code="CAN-RK-004",
         first_name="Rajesh",
@@ -220,28 +196,26 @@ async def seed_data_if_empty(session: AsyncSession):
         ai_score=88.0,
         skills_match_percentage=85.0,
         research_score=80.0,
-        application_status="applied"
+        application_status="applied",
     )
-
     session.add_all([c1, c2, c3, c4])
     await session.flush()
 
-    # 4. Job Applications
     ja1 = JobApplication(
         job_id=job_cse.id,
         candidate_id=c1.id,
         ai_score=94.0,
         skills_match=95.0,
         research_score=92.0,
-        application_status="shortlisted"
+        application_status="shortlisted",
     )
-    ja2_id_ece = JobApplication(
+    ja2 = JobApplication(
         job_id=job_ece.id,
         candidate_id=c2.id,
         ai_score=92.0,
         skills_match=90.0,
         research_score=85.0,
-        application_status="interviewed"
+        application_status="interviewed",
     )
     ja3 = JobApplication(
         job_id=job_cse.id,
@@ -249,7 +223,7 @@ async def seed_data_if_empty(session: AsyncSession):
         ai_score=96.0,
         skills_match=97.0,
         research_score=94.0,
-        application_status="selected"
+        application_status="selected",
     )
     ja4 = JobApplication(
         job_id=job_cse.id,
@@ -257,14 +231,13 @@ async def seed_data_if_empty(session: AsyncSession):
         ai_score=88.0,
         skills_match=85.0,
         research_score=80.0,
-        application_status="pending"
+        application_status="pending",
     )
-    session.add_all([ja1, ja2_id_ece, ja3, ja4])
+    session.add_all([ja1, ja2, ja3, ja4])
     await session.flush()
 
-    # 5. Interviews
     int1 = Interview(
-        job_application_id=ja2_id_ece.id,
+        job_application_id=ja2.id,
         candidate_id=c2.id,
         interview_type="Technical Panel ECE",
         interview_date=datetime.now() + timedelta(hours=2),
@@ -273,7 +246,7 @@ async def seed_data_if_empty(session: AsyncSession):
         mode="online",
         meeting_link="https://teams.microsoft.com/l/meetup-join/19%3ameeting_Nz...",
         status="Ongoing",
-        overall_score=85.0
+        overall_score=85.0,
     )
     int2 = Interview(
         job_application_id=ja1.id,
@@ -285,12 +258,11 @@ async def seed_data_if_empty(session: AsyncSession):
         mode="online",
         meeting_link="https://teams.microsoft.com/l/meetup-join/19%3ameeting_Mm...",
         status="Completed",
-        overall_score=91.0
+        overall_score=91.0,
     )
     session.add_all([int1, int2])
     await session.flush()
 
-    # 6. Evaluations
     ev1 = Evaluation(
         job_application_id=ja1.id,
         candidate_id=c1.id,
@@ -302,7 +274,7 @@ async def seed_data_if_empty(session: AsyncSession):
         final_score=91.2,
         final_percentage=91.2,
         determination="Recommended",
-        remarks="Strong subject knowledge, good coding skills."
+        remarks="Strong subject knowledge, good coding skills.",
     )
     ev2 = Evaluation(
         job_application_id=ja3.id,
@@ -315,12 +287,11 @@ async def seed_data_if_empty(session: AsyncSession):
         final_score=94.8,
         final_percentage=94.8,
         determination="Strong Recommended",
-        remarks="Outstanding publication record and research profile."
+        remarks="Outstanding publication record and research profile.",
     )
     session.add_all([ev1, ev2])
     await session.flush()
 
-    # 7. Selections
     sel1 = Selection(
         candidate_id=c3.id,
         job_id=job_cse.id,
@@ -328,41 +299,57 @@ async def seed_data_if_empty(session: AsyncSession):
         offered_salary=1440000.00,
         joining_date=(datetime.now() + timedelta(days=30)).date(),
         acceptance_status="pending",
-        status="in_progress"
+        status="in_progress",
     )
     session.add_all([sel1])
 
-    # 8. Research Papers
     papers = [
-        ResearchPaper(candidate_id=c1.id, paper_title="Deep Learning in Healthcare", journal_name="IEEE Trans", publication_year=2024, citations_count=10),
-        ResearchPaper(candidate_id=c1.id, paper_title="AI for NLP", journal_name="Springer AI", publication_year=2023, citations_count=5),
-        ResearchPaper(candidate_id=c2.id, paper_title="IoT architectures", journal_name="IEEE IoT Journal", publication_year=2024, citations_count=12),
-        ResearchPaper(candidate_id=c3.id, paper_title="Generative Models", journal_name="Nature Machine Intelligence", publication_year=2025, citations_count=35),
+        ResearchPaper(
+            candidate_id=c1.id,
+            paper_title="Deep Learning in Healthcare",
+            journal_name="IEEE Trans",
+            publication_year=2024,
+            citations_count=10,
+        ),
+        ResearchPaper(
+            candidate_id=c1.id,
+            paper_title="AI for NLP",
+            journal_name="Springer AI",
+            publication_year=2023,
+            citations_count=5,
+        ),
+        ResearchPaper(
+            candidate_id=c2.id,
+            paper_title="IoT architectures",
+            journal_name="IEEE IoT Journal",
+            publication_year=2024,
+            citations_count=12,
+        ),
+        ResearchPaper(
+            candidate_id=c3.id,
+            paper_title="Generative Models",
+            journal_name="Nature Machine Intelligence",
+            publication_year=2025,
+            citations_count=35,
+        ),
     ]
     session.add_all(papers)
 
     await session.commit()
-    print("Database seeding completed successfully!")
 
 
-# ============================================
-# HEALTH CHECK
-# ============================================
 @app.get("/")
 async def root():
     return {"message": "HR Recruitment System API", "status": "running", "port": 5001}
+
 
 @app.get("/api/health")
 async def health_check():
     return {"status": "healthy", "database": "recruitment_system"}
 
 
-# ============================================
-# DASHBOARD ENDPOINTS
-# ============================================
 @app.get("/api/dashboard")
 async def get_dashboard(session: AsyncSession = Depends(get_db)):
-    """Get dashboard stats, schedule, and timeline (used by Dashboard.jsx)"""
     total_candidates = await session.scalar(select(func.count()).select_from(Candidate))
     shortlisted = await session.scalar(
         select(func.count()).select_from(Candidate).where(Candidate.application_status == "shortlisted")
@@ -370,13 +357,6 @@ async def get_dashboard(session: AsyncSession = Depends(get_db)):
     total_jobs = await session.scalar(select(func.count()).select_from(Job))
     avg_ai_score = await session.scalar(select(func.avg(Candidate.ai_score)))
     total_vacancies = await session.scalar(select(func.sum(Job.vacancies)))
-
-    metrics = [
-        {"id": 1, "icon": "group", "title": "Total Candidates", "value": str(total_candidates or 0)},
-        {"id": 2, "icon": "auto_awesome", "title": "Avg AI Score", "value": f"{round(float(avg_ai_score or 0), 1)}%"},
-        {"id": 3, "icon": "description", "title": "Open Job Vacancies", "value": str(total_vacancies or 0)},
-        {"id": 4, "icon": "person_add", "title": "Shortlisted Candidates", "value": str(shortlisted or 0)},
-    ]
 
     result = await session.execute(
         select(Interview)
@@ -392,46 +372,39 @@ async def get_dashboard(session: AsyncSession = Depends(get_db)):
             continue
         c = i.candidate
         initials = f"{c.first_name[0] if c.first_name else ''}{c.last_name[0] if c.last_name else ''}".upper()
-
         status_class = "bg-blue-100 text-blue-700"
         if i.status == "Ongoing":
             status_class = "bg-amber-100 text-amber-700"
-
-        schedule_rows.append({
-            "id": i.id,
-            "avatarBg": "bg-indigo-100 text-indigo-700" if idx % 2 == 0 else "bg-purple-100 text-purple-700",
-            "initial": initials,
-            "name": f"{c.first_name} {c.last_name}",
-            "role": c.specialization or "Faculty",
-            "statusClass": status_class,
-            "status": i.status,
-            "action": "Interview"
-        })
-
-    timeline_events = [
-        {
-            "id": 1,
-            "date": "10:00 AM",
-            "description": "Technical Panel CSE Scheduled",
-            "active": True
-        },
-        {
-            "id": 2,
-            "date": "02:00 PM",
-            "description": "Dean Selection Review",
-            "active": False
-        }
-    ]
+        schedule_rows.append(
+            {
+                "id": i.id,
+                "avatarBg": "bg-indigo-100 text-indigo-700" if idx % 2 == 0 else "bg-purple-100 text-purple-700",
+                "initial": initials,
+                "name": f"{c.first_name} {c.last_name}",
+                "role": c.specialization or "Faculty",
+                "statusClass": status_class,
+                "status": i.status,
+                "action": "Interview",
+            }
+        )
 
     return {
-        "metrics": metrics,
+        "metrics": [
+            {"id": 1, "icon": "group", "title": "Total Candidates", "value": str(total_candidates or 0)},
+            {"id": 2, "icon": "auto_awesome", "title": "Avg AI Score", "value": f"{round(float(avg_ai_score or 0), 1)}%"},
+            {"id": 3, "icon": "description", "title": "Open Job Vacancies", "value": str(total_vacancies or 0)},
+            {"id": 4, "icon": "person_add", "title": "Shortlisted Candidates", "value": str(shortlisted or 0)},
+        ],
         "scheduleRows": schedule_rows,
-        "timelineEvents": timeline_events
+        "timelineEvents": [
+            {"id": 1, "date": "10:00 AM", "description": "Technical Panel CSE Scheduled", "active": True},
+            {"id": 2, "date": "02:00 PM", "description": "Dean Selection Review", "active": False},
+        ],
     }
+
 
 @app.get("/api/dashboard/stats")
 async def get_dashboard_stats(session: AsyncSession = Depends(get_db)):
-    """Get dashboard stats summary"""
     total_candidates = await session.scalar(select(func.count()).select_from(Candidate))
     shortlisted = await session.scalar(
         select(func.count()).select_from(Candidate).where(Candidate.application_status == "shortlisted")
@@ -447,12 +420,8 @@ async def get_dashboard_stats(session: AsyncSession = Depends(get_db)):
     }
 
 
-# ============================================
-# JOBS ENDPOINTS
-# ============================================
 @app.post("/api/jobs")
 async def create_job(payload: JobCreateRequest, session: AsyncSession = Depends(get_db)):
-    """Create a job vacancy"""
     if payload.vacancies is None or payload.vacancies <= 0:
         raise HTTPException(status_code=400, detail="vacancies must be > 0")
 
@@ -494,14 +463,13 @@ async def create_job(payload: JobCreateRequest, session: AsyncSession = Depends(
 
     return {"success": True, "job_id": job.id}
 
-# Update job
+
 @app.put("/api/jobs/{job_id}")
 async def update_job(job_id: int, payload: JobCreateRequest, session: AsyncSession = Depends(get_db)):
     async with session.begin():
         job = await session.get(Job, job_id)
         if not job:
             raise HTTPException(status_code=404, detail="Job not found")
-        # Update mutable fields
         job.position_name = payload.jobTitle or job.position_name
         job.department = payload.department or job.department
         job.vacancies = payload.vacancies or job.vacancies
@@ -512,7 +480,7 @@ async def update_job(job_id: int, payload: JobCreateRequest, session: AsyncSessi
             job.closing_date = datetime.fromisoformat(payload.endDate).date()
     return {"success": True, "job_id": job.id}
 
-# Delete job
+
 @app.delete("/api/jobs/{job_id}")
 async def delete_job(job_id: int, session: AsyncSession = Depends(get_db)):
     async with session.begin():
@@ -522,11 +490,12 @@ async def delete_job(job_id: int, session: AsyncSession = Depends(get_db)):
         await session.delete(job)
     return {"success": True}
 
+
 @app.post("/api/candidates")
 async def create_candidate(payload: CandidateCreateRequest, session: AsyncSession = Depends(get_db)):
-    """Create a new candidate"""
     if not payload.firstName or not payload.lastName or not payload.email:
         raise HTTPException(status_code=400, detail="First name, last name and email are required")
+
     candidate = Candidate(
         candidate_code=f"CAN-{payload.email.split('@')[0].upper()}",
         first_name=payload.firstName,
@@ -538,11 +507,13 @@ async def create_candidate(payload: CandidateCreateRequest, session: AsyncSessio
         specialization=payload.specialization,
         application_status="applied",
     )
+
     async with session.begin():
         session.add(candidate)
+
     return {"success": True, "candidate_id": candidate.id}
 
-# Update candidate
+
 @app.put("/api/candidates/{candidate_id}")
 async def update_candidate(candidate_id: int, payload: CandidateCreateRequest, session: AsyncSession = Depends(get_db)):
     async with session.begin():
@@ -556,9 +527,10 @@ async def update_candidate(candidate_id: int, payload: CandidateCreateRequest, s
         cand.total_experience_years = payload.experience or cand.total_experience_years
         cand.highest_qualification = payload.qualification or cand.highest_qualification
         cand.specialization = payload.specialization or cand.specialization
+
     return {"success": True, "candidate_id": cand.id}
 
-# Delete candidate
+
 @app.delete("/api/candidates/{candidate_id}")
 async def delete_candidate(candidate_id: int, session: AsyncSession = Depends(get_db)):
     async with session.begin():
@@ -568,9 +540,9 @@ async def delete_candidate(candidate_id: int, session: AsyncSession = Depends(ge
         await session.delete(cand)
     return {"success": True}
 
+
 @app.get("/api/jobs")
 async def get_jobs(session: AsyncSession = Depends(get_db)):
-    """Get all jobs"""
     result = await session.execute(select(Job).order_by(Job.id.desc()))
     jobs = result.scalars().all()
     return [
@@ -586,21 +558,17 @@ async def get_jobs(session: AsyncSession = Depends(get_db)):
         for j in jobs
     ]
 
+
 @app.get("/api/jobs/{job_id}")
 async def get_job(job_id: int, session: AsyncSession = Depends(get_db)):
-    """Get job by ID"""
     job = await session.get(Job, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
     return job
 
 
-# ============================================
-# CANDIDATES ENDPOINTS
-# ============================================
 @app.get("/api/candidates")
 async def get_candidates(session: AsyncSession = Depends(get_db)):
-    """Get all candidates sorted by AI score (aligned with Candidates.jsx)"""
     result = await session.execute(
         select(Candidate)
         .options(selectinload(Candidate.applications))
@@ -611,14 +579,9 @@ async def get_candidates(session: AsyncSession = Depends(get_db)):
     response_data = []
     for idx, c in enumerate(candidates):
         initials = f"{c.first_name[0] if c.first_name else ''}{c.last_name[0] if c.last_name else ''}".upper()
-
-        # Get research papers count
-        papers_count = await session.scalar(
-            select(func.count()).select_from(ResearchPaper).where(ResearchPaper.candidate_id == c.id)
-        )
+        papers_count = await session.scalar(select(func.count()).select_from(ResearchPaper).where(ResearchPaper.candidate_id == c.id))
         papers_count = papers_count or 0
 
-        # Find department from application
         dept = c.specialization or "CSE"
         if c.applications:
             job_result = await session.get(Job, c.applications[0].job_id)
@@ -629,35 +592,37 @@ async def get_candidates(session: AsyncSession = Depends(get_db)):
             "bg-purple-100 text-purple-700",
             "bg-blue-100 text-blue-700",
             "bg-teal-100 text-teal-700",
-            "bg-indigo-100 text-indigo-700"
+            "bg-indigo-100 text-indigo-700",
         ]
         color = colors[idx % len(colors)]
 
-        response_data.append({
-            "id": c.id,
-            "candidate_code": c.candidate_code,
-            "name": f"{c.first_name} {c.last_name}",
-            "first_name": c.first_name,
-            "last_name": c.last_name,
-            "email": c.email,
-            "initials": initials,
-            "color": color,
-            "score": int(c.ai_score or 0),
-            "exp": f"{int(c.total_experience_years or 0)} Years",
-            "expYears": c.total_experience_years or 0,
-            "qual": c.highest_qualification or "Ph.D.",
-            "match": int(c.skills_match_percentage or 0),
-            "research": f"{papers_count} Papers",
-            "researchCount": papers_count,
-            "department": dept,
-            "status": (c.application_status or "applied").upper(),
-        })
+        response_data.append(
+            {
+                "id": c.id,
+                "candidate_code": c.candidate_code,
+                "name": f"{c.first_name} {c.last_name}",
+                "first_name": c.first_name,
+                "last_name": c.last_name,
+                "email": c.email,
+                "initials": initials,
+                "color": color,
+                "score": int(c.ai_score or 0),
+                "exp": f"{int(c.total_experience_years or 0)} Years",
+                "expYears": c.total_experience_years or 0,
+                "qual": c.highest_qualification or "Ph.D.",
+                "match": int(c.skills_match_percentage or 0),
+                "research": f"{papers_count} Papers",
+                "researchCount": papers_count,
+                "department": dept,
+                "status": (c.application_status or "applied").upper(),
+            }
+        )
 
     return response_data
 
+
 @app.get("/api/candidates/top")
 async def get_top_candidates(limit: int = 10, session: AsyncSession = Depends(get_db)):
-    """Get top AI-scored candidates (matching PDF format)"""
     result = await session.execute(
         select(Candidate)
         .where(Candidate.application_status == "shortlisted")
@@ -679,9 +644,9 @@ async def get_top_candidates(limit: int = 10, session: AsyncSession = Depends(ge
         for c in candidates
     ]
 
+
 @app.get("/api/candidates/{candidate_id}")
 async def get_candidate(candidate_id: int, session: AsyncSession = Depends(get_db)):
-    """Get candidate by ID (aligned with Offer.jsx dynamic fields)"""
     result = await session.execute(
         select(Candidate)
         .options(selectinload(Candidate.applications))
@@ -712,23 +677,20 @@ async def get_candidate(candidate_id: int, session: AsyncSession = Depends(get_d
         "basePay": "₹57,700",
         "refNumber": ref_num,
         "dateCreated": date_created,
-        "status": c.application_status
+        "status": c.application_status,
     }
 
 
-# ============================================
-# INTERVIEWS ENDPOINTS
-# ============================================
 @app.post("/api/interviews")
 async def schedule_interview(payload: schemas.InterviewCreate, session: AsyncSession = Depends(get_db)):
-    """Schedule a new interview"""
-    # Validate related entities
     job_app = await session.get(JobApplication, payload.jobId)
     if not job_app:
         raise HTTPException(status_code=404, detail="Job application not found")
+
     candidate = await session.get(Candidate, payload.candidateId)
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
+
     interview = Interview(
         job_application_id=payload.jobId,
         candidate_id=payload.candidateId,
@@ -741,10 +703,11 @@ async def schedule_interview(payload: schemas.InterviewCreate, session: AsyncSes
         status="scheduled",
         overall_score=None,
     )
+
     async with session.begin():
         session.add(interview)
         await session.flush()
-    # Return the created interview object (as dict)
+
     return {
         "id": interview.id,
         "candidateId": interview.candidate_id,
@@ -758,47 +721,45 @@ async def schedule_interview(payload: schemas.InterviewCreate, session: AsyncSes
         "status": interview.status,
     }
 
+
 @app.delete("/api/interviews/{id}")
 async def cancel_interview(id: int, session: AsyncSession = Depends(get_db)):
-    """Cancel an interview"""
     async with session.begin():
         await session.execute(delete(Interview).where(Interview.id == id))
     return {"success": True}
 
 
-# ============================================
-# EVALUATION ENDPOINTS
-# ============================================
 @app.post("/api/evaluation")
 async def create_evaluation(payload: EvaluationCreateRequest, session: AsyncSession = Depends(get_db)):
-    """Create or update evaluation for a candidate"""
     candidate = await session.get(Candidate, payload.candidateId)
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
+
     job_app = await session.get(JobApplication, payload.jobApplicationId)
     if not job_app:
         raise HTTPException(status_code=404, detail="Job application not found")
-    # Upsert evaluation
-    eval_result = await session.execute(
-        select(Evaluation).where(Evaluation.candidate_id == candidate.id)
-    )
+
+    eval_result = await session.execute(select(Evaluation).where(Evaluation.candidate_id == candidate.id))
     ev = eval_result.scalar_one_or_none()
     if not ev:
         ev = Evaluation(candidate_id=candidate.id, job_application_id=job_app.id)
         session.add(ev)
+
     ev.ai_initial_score = payload.aiScore
     ev.interview_score = payload.aiScore  # placeholder
     ev.technical_assessment = payload.technicalScore
     ev.research_evaluation = payload.researchScore
     ev.final_score = payload.finalScore
     ev.determination = "Recommended"
+
     async with session.begin():
         await session.flush()
+
     return {"success": True, "evaluation_id": ev.id}
+
 
 @app.delete("/api/evaluation/{id}")
 async def remove_evaluation(id: int, session: AsyncSession = Depends(get_db)):
-    """Remove candidate from evaluation status"""
     async with session.begin():
         c = await session.get(Candidate, id)
         if c:
@@ -807,12 +768,8 @@ async def remove_evaluation(id: int, session: AsyncSession = Depends(get_db)):
     return {"success": True}
 
 
-# ============================================
-# SELECTION ENDPOINTS
-# ============================================
 @app.get("/api/selection")
 async def get_selection_list(session: AsyncSession = Depends(get_db)):
-    """Get candidates for final selection decision (aligned with Selection.jsx)"""
     result = await session.execute(
         select(Candidate)
         .options(selectinload(Candidate.interviews))
@@ -825,10 +782,7 @@ async def get_selection_list(session: AsyncSession = Depends(get_db)):
     for c in candidates:
         initials = f"{c.first_name[0] if c.first_name else ''}{c.last_name[0] if c.last_name else ''}".upper()
 
-        eval_result = await session.execute(
-            select(Evaluation).where(Evaluation.candidate_id == c.id)
-        )
-        ev = eval_result.scalar_one_or_none()
+        ev = (await session.execute(select(Evaluation).where(Evaluation.candidate_id == c.id))).scalar_one_or_none()
 
         recommendation_type = "Recommended"
         sub_type = c.highest_qualification or "Ph.D."
@@ -839,33 +793,33 @@ async def get_selection_list(session: AsyncSession = Depends(get_db)):
             final_score = ev.final_score
             sub_type = f"{c.highest_qualification} - {ev.remarks}"[:30] if ev.remarks else c.highest_qualification
 
-        sel_result = await session.execute(
-            select(Selection).where(Selection.candidate_id == c.id)
-        )
-        sel = sel_result.scalar_one_or_none()
-        decision = None
+        sel = (await session.execute(select(Selection).where(Selection.candidate_id == c.id))).scalar_one_or_none()
         if sel:
             decision = "Selected" if sel.status == "in_progress" or sel.status == "accepted" else "Rejected"
-        elif c.application_status == "selected" or c.application_status == "offered":
+        elif c.application_status in ("selected", "offered"):
             decision = "Selected"
         elif c.application_status == "rejected":
             decision = "Rejected"
+        else:
+            decision = None
 
-        response_data.append({
-            "id": c.id,
-            "name": f"{c.first_name} {c.last_name}",
-            "initials": initials,
-            "type": recommendation_type,
-            "subType": sub_type,
-            "score": final_score,
-            "decision": decision
-        })
+        response_data.append(
+            {
+                "id": c.id,
+                "name": f"{c.first_name} {c.last_name}",
+                "initials": initials,
+                "type": recommendation_type,
+                "subType": sub_type,
+                "score": final_score,
+                "decision": decision,
+            }
+        )
 
     return response_data
 
+
 @app.patch("/api/selection/{id}")
 async def update_selection_decision(id: int, payload: SelectionDecisionRequest, session: AsyncSession = Depends(get_db)):
-    """Update selection decision (Selected / Reject)"""
     async with session.begin():
         c = await session.get(Candidate, id)
         if not c:
@@ -873,26 +827,20 @@ async def update_selection_decision(id: int, payload: SelectionDecisionRequest, 
 
         if payload.decision == "Selected":
             c.application_status = "selected"
-
-            sel_result = await session.execute(
-                select(Selection).where(Selection.candidate_id == id)
-            )
-            sel = sel_result.scalar_one_or_none()
+            sel = (await session.execute(select(Selection).where(Selection.candidate_id == id))).scalar_one_or_none()
             if not sel:
-                ja_result = await session.execute(
-                    select(JobApplication).where(JobApplication.candidate_id == id)
-                )
-                ja = ja_result.scalars().first()
+                ja = (await session.execute(select(JobApplication).where(JobApplication.candidate_id == id))).scalars().first()
                 job_id = ja.job_id if ja else None
 
-                sel = Selection(
-                    candidate_id=id,
-                    job_id=job_id,
-                    offered_position="Assistant Professor",
-                    offered_salary=1440000.00,
-                    status="in_progress"
+                session.add(
+                    Selection(
+                        candidate_id=id,
+                        job_id=job_id,
+                        offered_position="Assistant Professor",
+                        offered_salary=1440000.00,
+                        status="in_progress",
+                    )
                 )
-                session.add(sel)
         else:
             c.application_status = "rejected"
             await session.execute(delete(Selection).where(Selection.candidate_id == id))
@@ -900,27 +848,22 @@ async def update_selection_decision(id: int, payload: SelectionDecisionRequest, 
     return {"success": True}
 
 
-# ============================================
-# OFFERS ENDPOINTS
-# ============================================
 @app.post("/api/offers")
 async def create_offer(payload: schemas.OfferCreate, session: AsyncSession = Depends(get_db)):
-    """Generate an offer for a candidate"""
     candidate = await session.get(Candidate, payload.candidateId)
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
-    # Create OfferOnboarding (assuming model exists)
+
     offer = OfferOnboarding(
         candidate_id=candidate.id,
         position=payload.position,
         salary=payload.salary,
         joining_date=datetime.fromisoformat(payload.joiningDate).date(),
-        # PDF placeholder URL could be static
         offer_doc_url="http://example.com/offer.pdf",
     )
+
     async with session.begin():
         session.add(offer)
+
     return {"success": True, "offer_id": offer.id}
-
-
 
