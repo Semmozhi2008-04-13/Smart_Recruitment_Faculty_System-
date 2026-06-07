@@ -9,12 +9,12 @@ from sqlalchemy import select, func
 from pydantic import BaseModel
 from typing import Optional, List
 
-from backend.backend.database import get_db, engine, Base
+from backend.database import get_db, engine, Base
 from datetime import datetime
-from backend.backend.models import (
+from backend.models import (
     Job,
     Candidate,
-    JobApplication,  # Now this exists
+    JobApplication,
     Interview,
     Evaluation,
     Selection,
@@ -25,6 +25,7 @@ from backend.backend.models import (
     InterviewPanel,
     Notification,
 )
+
 
 
 class JobCreateRequest(BaseModel):
