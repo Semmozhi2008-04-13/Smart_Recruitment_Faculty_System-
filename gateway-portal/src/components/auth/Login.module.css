@@ -1,0 +1,58 @@
+.logincontainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f4f6f9; 
+}
+
+.loginHeading {
+  text-align: center;
+  color: #333;
+  margin-bottom: 1.5rem; 
+  font-size: 1.5rem;
+}
+
+.loginimg {
+  width: 100px;        
+  height: auto;         
+  margin: 0 auto 1rem;  
+  display: block;
+}
+
+/* The login card */
+.logincontainer form {
+  background: white;
+  padding: 2.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+/* Input fields */
+.logincontainer input {
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+/* Button */
+.logincontainer button {
+  background-color: #4a6cf7; /* Adjust this to match your brand blue */
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+.logincontainer button:hover {
+  background-color: #3b5bdb;
+}
