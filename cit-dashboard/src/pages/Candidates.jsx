@@ -4,61 +4,51 @@ import { apiGet } from '../services/api';
 
 const PAGE_SIZE = 5;
 
-const mock_candidate = [
-  {
-    name: 'Dr. Reena Sen',
-    initials: 'RS',
-    color: "bg-purple-100 text-purple-700",
-    score: 94,
-    exp: "8 Years",
-    expYears: 8, 
-    qual: "Ph.D. (IIT Kanpur)",
-    match: 95,
-    research: "14 Papers",
-    researchCount: 14,
-    department: "CSE",
-    status: "SHORTLISTED"
-  },
-  {
-    name: 'Dr. Liam Chen',
-    initials: 'LC',
-    color: "bg-purple-100 text-purple-700",
-    score: 92,
-    exp: "6 Years",
-    expYears: 6, 
-    qual: "M.Tech (NIT Trichy)",
-    match: 90,
-    research: "12 Papers",
-    researchCount: 12,
-    department: "ECE",
-    status: "REVIEW"
-  }
-];
-
 export default function CandidateContentArea() {
-  const [candidates, setCandidates] = useState(mock_candidate);
+  const [candidates, setCandidates] = useState([]);
+  const [totalItems, setTotalItems] = useState(0); 
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
+
   const [searchParams] = useSearchParams();
   const [typedSearchTerm, setTypedSearchTerm] = useState(null);
   const [departmentFilter, setDepartmentFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
   const [sortBy, setSortBy] = useState('score');
   const [currentPage, setCurrentPage] = useState(1);
+
   const searchTerm = typedSearchTerm ?? searchParams.get('search') ?? '';
 
   useEffect(() => {
     let isMounted = true;
+    setIsLoading(true);
 
-    apiGet('/api/candidates')
-      .then((data) => {
+    const queryParams = new URLSearchParams({
+      page: currentPage,
+      limit: PAGE_SIZE,
+      search: searchTerm.trim(),
+      department: departmentFilter,
+      status: statusFilter,
+      sort: sortBy
+    });
+
+    apiGet(`/api/candidates?${queryParams.toString()}`)
+      .then((res) => {
         if (isMounted) {
-          setCandidates(data);
+          if (Array.isArray(res)) {
+            setCandidates(res);
+            setTotalItems(res.length);
+          } else if (res && res.data) {
+            setCandidates(res.data);
+            setTotalItems(res.total || res.data.length);
+          }
           setLoadError('');
         }
       })
-      .catch(() => {
-        if (isMounted) setLoadError('Unable to load candidates from database.');
+      .catch((err) => {
+        if (isMounted) {
+          setLoadError(err?.message || 'Failed to fetch candidate details.');
+        }
       })
       .finally(() => {
         if (isMounted) setIsLoading(false);
@@ -67,80 +57,44 @@ export default function CandidateContentArea() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [currentPage, searchTerm, departmentFilter, statusFilter, sortBy]);
 
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-  const filteredCandidates = candidates
-    .filter((candidate) => {
-      const matchesSearch = !normalizedSearch || [
-      candidate.name,
-      candidate.initials,
-      candidate.department,
-      candidate.score,
-      candidate.exp,
-      candidate.qual,
-      candidate.match,
-      candidate.research,
-      candidate.status,
-    ].some((value) => String(value).toLowerCase().includes(normalizedSearch));
-
-      const matchesDepartment = departmentFilter === 'All' || candidate.department === departmentFilter;
-      const matchesStatus = statusFilter === 'All' || candidate.status === statusFilter;
-
-      return matchesSearch && matchesDepartment && matchesStatus;
-    })
-    .sort((a, b) => {
-      if (sortBy === 'experience') return b.expYears - a.expYears;
-      if (sortBy === 'qualification') return a.qual.localeCompare(b.qual);
-      if (sortBy === 'research') return b.researchCount - a.researchCount;
-      return b.score - a.score;
-    });
-
-  const totalPages = Math.max(1, Math.ceil(filteredCandidates.length / PAGE_SIZE));
-  const safeCurrentPage = Math.min(currentPage, totalPages);
-  const pageStart = (safeCurrentPage - 1) * PAGE_SIZE;
-  const visibleCandidates = filteredCandidates.slice(pageStart, pageStart + PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
 
   const handleFilterChange = (setter, value) => {
     setter(value);
-    setCurrentPage(1);
+    setCurrentPage(1); 
+  };
+
+  const getInitials = (name) => {
+    if (!name) return '??';
+    return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
   };
 
   return (
     <div className="w-full max-w-[1600px] mx-auto p-6 bg-[#f8fafc]">
       
-      {/* Module Title & Descriptive Context Sub-Header */}
-      <div className="flex justify-between items-end mb-6">
-        <div>
-          <h1 className="text-[20px] font-extrabold text-indigo-950 tracking-tight uppercase">
-            AI-SCORED CANDIDATE LIST
-          </h1>
-          <div className="mt-2 flex items-center gap-4 text-gray-500 text-[13px] font-medium">
-            <div className="flex items-center gap-1.5 text-slate-700">
-              <span className="material-symbols-outlined text-[18px]">badge</span>
-              <span className="font-semibold text-[14px]">Assistant Professor - CSE</span>
-            </div>
-            <div className="h-3.5 w-[1px] bg-gray-300"></div>
-            <span>Vacancies: <span className="font-bold text-gray-800">10</span></span>
-            <div className="h-3.5 w-[1px] bg-gray-300"></div>
-            <span>Applications: <span className="font-bold text-gray-800">55</span></span>
-          </div>
-        </div>
+      {/* Clean Header */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-[20px] font-extrabold text-indigo-950 tracking-tight uppercase">
+          AI-SCORED CANDIDATE LIST
+        </h1>
         
-        <button className="flex items-center gap-2 px-3.5 py-1.5 bg-white border border-gray-200 rounded text-[13px] font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
+        <button className="flex items-center gap-2 px-3.5 h-10 bg-white border border-gray-200 rounded text-[13px] font-bold text-gray-700 hover:bg-gray-50 transition-colors shadow-sm">
           <span className="material-symbols-outlined text-[18px]">file_download</span>
           <span>Export Report</span>
         </button>
       </div>
 
-      {/* Bento-Style Filter Alignment Workspace Panel */}
+      {/* Fixed Alignment Workspace Panel */}
       <div className="bg-white border border-gray-200 rounded-xl p-3.5 mb-6 shadow-sm flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3 flex-1 min-w-[300px]">
-          <div className="relative w-full max-w-xs">
+          {/* Unified Height Search Input Wrapper */}
+          <div className="relative w-full max-w-md">
             <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-[18px]">search</span>
             <input
-              className="w-full pl-9 pr-4 py-1.5 bg-white border border-gray-200 rounded text-[13px] focus:ring-2 focus:ring-indigo-600/10 outline-none"
-              placeholder="Candidate name..."
+              className="w-full pl-9 pr-4 h-10 bg-white border border-gray-200 rounded-lg text-[13px] text-gray-800 placeholder-gray-400 focus:ring-2 focus:ring-indigo-600/10 outline-none transition-all"
+              placeholder="Search candidates by name, qualification, or skills..."
               type="text"
               value={searchTerm}
               onChange={(event) => {
@@ -150,34 +104,48 @@ export default function CandidateContentArea() {
             />
           </div>
           
-          <select
-            className="bg-white border border-gray-200 rounded text-[13px] px-3 py-1.5 font-medium text-gray-600 outline-none"
-            value={departmentFilter}
-            onChange={(event) => handleFilterChange(setDepartmentFilter, event.target.value)}
-          >
-            <option value="All">Department: All</option>
-            <option value="CSE">CSE</option>
-            <option value="IT">IT</option>
-            <option value="ECE">ECE</option>
-            <option value="MECH">MECH</option>
-          </select>
-          <select
-            className="bg-white border border-gray-200 rounded text-[13px] px-3 py-1.5 font-medium text-gray-600 outline-none"
-            value={statusFilter}
-            onChange={(event) => handleFilterChange(setStatusFilter, event.target.value)}
-          >
-            <option value="All">Status: All</option>
-            <option value="SHORTLISTED">Shortlisted</option>
-            <option value="PENDING">Pending</option>
-            <option value="REVIEW">Review</option>
-            <option value="REJECTED">Rejected</option>
-          </select>
+          {/* Corrected Dropdown Component: Department */}
+          <div className="relative">
+            <select
+              className="appearance-none bg-white border border-gray-200 rounded-lg text-[13px] pl-3 pr-8 h-10 font-medium text-gray-600 outline-none cursor-pointer hover:border-gray-300 transition-colors min-w-[140px]"
+              value={departmentFilter}
+              onChange={(event) => handleFilterChange(setDepartmentFilter, event.target.value)}
+            >
+              <option value="All">Department: All</option>
+              <option value="CSE">CSE</option>
+              <option value="IT">IT</option>
+              <option value="ECE">ECE</option>
+              <option value="MECH">MECH</option>
+            </select>
+            <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-[18px]">
+              keyboard_arrow_down
+            </span>
+          </div>
+
+          {/* Corrected Dropdown Component: Status */}
+          <div className="relative">
+            <select
+              className="appearance-none bg-white border border-gray-200 rounded-lg text-[13px] pl-3 pr-8 h-10 font-medium text-gray-600 outline-none cursor-pointer hover:border-gray-300 transition-colors min-w-[120px]"
+              value={statusFilter}
+              onChange={(event) => handleFilterChange(setStatusFilter, event.target.value)}
+            >
+              <option value="All">Status: All</option>
+              <option value="SHORTLISTED">Shortlisted</option>
+              <option value="PENDING">Pending</option>
+              <option value="REVIEW">Review</option>
+              <option value="REJECTED">Rejected</option>
+            </select>
+            <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none text-[18px]">
+              keyboard_arrow_down
+            </span>
+          </div>
         </div>
 
+        {/* Unified Height Action Buttons */}
         <div className="flex items-center gap-2">
-          <button onClick={() => handleFilterChange(setSortBy, 'experience')} className={`px-3 py-1.5 border rounded text-[12px] font-bold ${sortBy === 'experience' ? 'bg-indigo-900 text-white border-indigo-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>Experience</button>
-          <button onClick={() => handleFilterChange(setSortBy, 'qualification')} className={`px-3 py-1.5 border rounded text-[12px] font-bold ${sortBy === 'qualification' ? 'bg-indigo-900 text-white border-indigo-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>Qualification</button>
-          <button onClick={() => handleFilterChange(setSortBy, 'research')} className={`px-3 py-1.5 border rounded text-[12px] font-bold ${sortBy === 'research' ? 'bg-indigo-900 text-white border-indigo-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>Research</button>
+          <button onClick={() => handleFilterChange(setSortBy, 'experience')} className={`px-3 h-10 border rounded-lg text-[12px] font-bold transition-all ${sortBy === 'experience' ? 'bg-indigo-900 text-white border-indigo-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>Experience</button>
+          <button onClick={() => handleFilterChange(setSortBy, 'qualification')} className={`px-3 h-10 border rounded-lg text-[12px] font-bold transition-all ${sortBy === 'qualification' ? 'bg-indigo-900 text-white border-indigo-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>Qualification</button>
+          <button onClick={() => handleFilterChange(setSortBy, 'research')} className={`px-3 h-10 border rounded-lg text-[12px] font-bold transition-all ${sortBy === 'research' ? 'bg-indigo-900 text-white border-indigo-900' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}`}>Research</button>
           <button
             onClick={() => {
               setTypedSearchTerm('');
@@ -186,7 +154,7 @@ export default function CandidateContentArea() {
               setSortBy('score');
               setCurrentPage(1);
             }}
-            className="p-1.5 text-indigo-900 hover:bg-gray-50 rounded border border-gray-100 ml-1"
+            className="w-10 h-10 flex items-center justify-center text-indigo-900 hover:bg-gray-50 rounded-lg border border-gray-100 ml-1 transition-colors"
             title="Reset filters"
           >
             <span className="material-symbols-outlined text-[20px]">filter_list</span>
@@ -194,7 +162,7 @@ export default function CandidateContentArea() {
         </div>
       </div>
 
-      {/* Main Candidate Responsive Dynamic Table Shell */}
+      {/* Main Candidate Table */}
       <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
         {loadError && <div className="px-6 py-3 bg-red-50 text-red-700 text-sm font-semibold">{loadError}</div>}
         <div className="overflow-x-auto">
@@ -212,47 +180,47 @@ export default function CandidateContentArea() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {visibleCandidates.map((candidate, idx) => (
-                <tr key={idx} className="hover:bg-gray-50/50 transition-colors">
-                  {/* Avatar Profile Column */}
+              {!isLoading && candidates.map((candidate, idx) => (
+                <tr key={candidate.id || idx} className="hover:bg-gray-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-[13px] ${candidate.color}`}>
-                        {candidate.initials}
+                      <div className={`w-9 h-9 rounded-full flex items-center justify-center font-bold text-[13px] ${candidate.color || 'bg-purple-100 text-purple-700'}`}>
+                        {candidate.initials || getInitials(candidate.name)}
                       </div>
-                      <span className="text-[13px] font-bold text-gray-800">{candidate.name}</span>
+                      <span className="text-[13px] font-bold text-gray-800">{candidate.name || '-'}</span>
                     </div>
                   </td>
                   
-                  {/* Interactive Score Linear Slider Indicator */}
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-16 bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                        <div className="bg-indigo-900 h-full rounded-full" style={{ width: `${candidate.score}%` }}></div>
+                        <div className="bg-indigo-900 h-full rounded-full" style={{ width: `${candidate.score || 0}%` }}></div>
                       </div>
-                      <span className="text-[13px] font-bold text-indigo-900">{candidate.score}%</span>
+                      <span className="text-[13px] font-bold text-indigo-900">{candidate.score || 0}%</span>
                     </div>
                   </td>
                   
-                  <td className="px-6 py-4 text-[13px] text-gray-600 font-medium">{candidate.exp}</td>
-                  <td className="px-6 py-4 text-[13px] text-gray-600 font-medium">{candidate.qual}</td>
-                  <td className="px-6 py-4 text-[13px] text-gray-600 font-medium">{candidate.match} %</td>
-                  <td className="px-6 py-4 text-[13px] text-gray-600 font-medium">{candidate.research}</td>
+                  <td className="px-6 py-4 text-[13px] text-gray-600 font-medium">{candidate.exp || '0 Years'}</td>
+                  <td className="px-6 py-4 text-[13px] text-gray-600 font-medium">{candidate.qual || '-'}</td>
+                  <td className="px-6 py-4 text-[13px] text-gray-600 font-medium">{candidate.match || 0} %</td>
+                  <td className="px-6 py-4 text-[13px] text-gray-600 font-medium">{candidate.research || '0 Papers'}</td>
                   
-                  {/* Inline Clean Status Badge Elements */}
                   <td className="px-6 py-4">
-                    <span className="px-2.5 py-1 bg-teal-50 text-teal-700 text-[10px] font-bold rounded tracking-wide border border-teal-100">
-                      {candidate.status}
+                    <span className={`px-2.5 py-1 text-[10px] font-bold rounded tracking-wide border ${
+                      candidate.status === 'SHORTLISTED' ? 'bg-teal-50 text-teal-700 border-teal-100' :
+                      candidate.status === 'REVIEW' ? 'bg-amber-50 text-amber-700 border-amber-100' :
+                      candidate.status === 'REJECTED' ? 'bg-rose-50 text-rose-700 border-rose-100' :
+                      'bg-slate-50 text-slate-700 border-slate-100'
+                    }`}>
+                      {candidate.status || 'PENDING'}
                     </span>
                   </td>
                   
-                  {/* Operational Action Control Triggers */}
                   <td className="px-6 py-4 text-center">
                     <button
                       type="button"
                       onClick={() => {
-                        // For now: navigate to interviews page. Later you can create interview drafts via API.
-                        window.location.href = `/interviews`;
+                        window.location.href = `/interviews?candidateName=${encodeURIComponent(candidate.name || '')}`;
                       }}
                       className="px-4 py-1.5 border border-indigo-900 text-indigo-900 rounded text-[12px] font-bold hover:bg-indigo-900 hover:text-white transition-all shadow-sm"
                     >
@@ -260,26 +228,28 @@ export default function CandidateContentArea() {
                       Schedule
                     </button>
                   </td>
-
                 </tr>
               ))}
-              {visibleCandidates.length === 0 && (
+              
+              {(isLoading || candidates.length === 0) && (
                 <tr>
                   <td colSpan="8" className="px-6 py-10 text-center text-sm font-semibold text-gray-500">
-                    {isLoading ? 'Loading candidates from database...' : 'No candidates match your search.'}
+                    {isLoading ? 'Loading candidates...' : 'No data entries match your exact filters.'}
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
         </div>
+        
+        {/* Pagination Controls */}
         <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-4 flex-wrap">
           <span className="text-sm font-medium text-gray-500">
-            Showing {filteredCandidates.length === 0 ? 0 : pageStart + 1} to {Math.min(pageStart + PAGE_SIZE, filteredCandidates.length)} of {filteredCandidates.length} candidates
+            Showing {candidates.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1} to {Math.min(currentPage * PAGE_SIZE, totalItems)} of {totalItems} candidates
           </span>
           <div className="flex items-center gap-2">
             <button
-              disabled={safeCurrentPage === 1}
+              disabled={currentPage === 1}
               onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
               className="px-3 py-1.5 border border-gray-200 rounded text-[12px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >
@@ -289,13 +259,13 @@ export default function CandidateContentArea() {
               <button
                 key={page}
                 onClick={() => setCurrentPage(page)}
-                className={`w-8 h-8 rounded text-[12px] font-bold ${safeCurrentPage === page ? 'bg-indigo-900 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                className={`w-8 h-8 rounded text-[12px] font-bold ${currentPage === page ? 'bg-indigo-900 text-white' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
               >
                 {page}
               </button>
             ))}
             <button
-              disabled={safeCurrentPage === totalPages}
+              disabled={currentPage === totalPages}
               onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
               className="px-3 py-1.5 border border-gray-200 rounded text-[12px] font-bold text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed"
             >

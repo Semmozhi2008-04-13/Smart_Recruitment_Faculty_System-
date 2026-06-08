@@ -8,7 +8,7 @@ from sqlalchemy.orm import selectinload
 from sqlalchemy import select, func, delete
 from pydantic import BaseModel
 from typing import Optional
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 from backend.database.connection import get_db, engine, Base, AsyncSessionLocal
 from backend.models import (
@@ -848,22 +848,486 @@ async def update_selection_decision(id: int, payload: SelectionDecisionRequest, 
     return {"success": True}
 
 
+@app.get("/api/interviews")
+async def get_interviews(status: str = None, session: AsyncSession = Depends(get_db)):
+    """Get list of interviews with optional status filter."""
+    query = select(Interview).options(selectinload(Interview.candidate))
+    if status:
+        query = query.where(Interview.status == status)
+    query = query.order_by(Interview.interview_date.desc())
+    
+    result = await session.execute(query)
+    interviews = result.scalars().all()
+    
+    response_data = []
+    for i in interviews:
+        if i.candidate:
+            response_data.append({
+                "id": i.id,
+                "candidate_id": i.candidate_id,
+                "candidate_name": f"{i.candidate.first_name} {i.candidate.last_name}",
+                "interview_type": i.interview_type,
+                "interview_date": i.interview_date.isoformat() if i.interview_date else None,
+                "interview_round": i.interview_round,
+                "interviewers": i.interviewers,
+                "mode": i.mode,
+                "meeting_link": i.meeting_link,
+                "status": i.status,
+                "overall_score": i.overall_score,
+                "remarks": i.remarks,
+            })
+    
+    return response_data
+
+
+@app.get("/api/interviews/{interview_id}")
+async def get_interview(interview_id: int, session: AsyncSession = Depends(get_db)):
+    """Get interview details."""
+    result = await session.execute(
+        select(Interview)
+        .options(selectinload(Interview.candidate), selectinload(Interview.interview_panels))
+        .where(Interview.id == interview_id)
+    )
+    interview = result.scalar_one_or_none()
+    if not interview:
+        raise HTTPException(status_code=404, detail="Interview not found")
+    
+    return {
+        "id": interview.id,
+        "candidate_id": interview.candidate_id,
+        "job_application_id": interview.job_application_id,
+        "candidate_name": f"{interview.candidate.first_name} {interview.candidate.last_name}" if interview.candidate else "",
+        "interview_type": interview.interview_type,
+        "interview_date": interview.interview_date.isoformat() if interview.interview_date else None,
+        "interview_round": interview.interview_round,
+        "interviewers": interview.interviewers,
+        "mode": interview.mode,
+        "meeting_link": interview.meeting_link,
+        "status": interview.status,
+        "overall_score": interview.overall_score,
+        "remarks": interview.remarks,
+        "interview_panels": [
+            {
+                "id": ip.id,
+                "panel_member_name": ip.panel_member_name,
+                "designation": ip.designation,
+                "score_given": ip.score_given,
+                "comments": ip.comments,
+            }
+            for ip in interview.interview_panels
+        ] if interview.interview_panels else [],
+    }
+
+
+@app.put("/api/interviews/{interview_id}")
+async def update_interview(interview_id: int, payload: schemas.InterviewUpdate, session: AsyncSession = Depends(get_db)):
+    """Update interview details."""
+    async with session.begin():
+        interview = await session.get(Interview, interview_id)
+        if not interview:
+            raise HTTPException(status_code=404, detail="Interview not found")
+        
+        if payload.interviewType:
+            interview.interview_type = payload.interviewType
+        if payload.interviewDate:
+            interview.interview_date = datetime.fromisoformat(payload.interviewDate)
+        if payload.interviewRound:
+            interview.interview_round = payload.interviewRound
+        if payload.interviewers:
+            interview.interviewers = payload.interviewers
+        if payload.mode:
+            interview.mode = payload.mode
+        if payload.meetingLink:
+            interview.meeting_link = payload.meetingLink
+        if payload.status:
+            interview.status = payload.status
+        if payload.overall_score is not None:
+            interview.overall_score = payload.overall_score
+    
+    return {"success": True, "interview_id": interview_id}
+
+
+@app.get("/api/evaluation")
+async def get_evaluations(status: str = None, session: AsyncSession = Depends(get_db)):
+    """Get list of evaluations with optional status filter."""
+    query = select(Evaluation).options(selectinload(Evaluation.candidate))
+    query = query.order_by(Evaluation.created_at.desc())
+    
+    result = await session.execute(query)
+    evaluations = result.scalars().all()
+    
+    response_data = []
+    for ev in evaluations:
+        if ev.candidate:
+            response_data.append({
+                "id": ev.id,
+                "candidate_id": ev.candidate_id,
+                "candidate_name": f"{ev.candidate.first_name} {ev.candidate.last_name}",
+                "job_application_id": ev.job_application_id,
+                "ai_initial_score": ev.ai_initial_score,
+                "interview_score": ev.interview_score,
+                "technical_assessment": ev.technical_assessment,
+                "research_evaluation": ev.research_evaluation,
+                "teaching_demo_score": ev.teaching_demo_score,
+                "final_score": ev.final_score,
+                "final_percentage": ev.final_percentage,
+                "determination": ev.determination,
+                "remarks": ev.remarks,
+            })
+    
+    return response_data
+
+
+@app.get("/api/evaluation/{evaluation_id}")
+async def get_evaluation(evaluation_id: int, session: AsyncSession = Depends(get_db)):
+    """Get evaluation details."""
+    evaluation = await session.get(Evaluation, evaluation_id)
+    if not evaluation:
+        raise HTTPException(status_code=404, detail="Evaluation not found")
+    
+    return {
+        "id": evaluation.id,
+        "candidate_id": evaluation.candidate_id,
+        "job_application_id": evaluation.job_application_id,
+        "ai_initial_score": evaluation.ai_initial_score,
+        "interview_score": evaluation.interview_score,
+        "technical_assessment": evaluation.technical_assessment,
+        "research_evaluation": evaluation.research_evaluation,
+        "teaching_demo_score": evaluation.teaching_demo_score,
+        "final_score": evaluation.final_score,
+        "final_percentage": evaluation.final_percentage,
+        "determination": evaluation.determination,
+        "remarks": evaluation.remarks,
+    }
+
+
+@app.put("/api/evaluation/{evaluation_id}")
+async def update_evaluation(evaluation_id: int, payload: schemas.EvaluationUpdate, session: AsyncSession = Depends(get_db)):
+    """Update evaluation details."""
+    async with session.begin():
+        ev = await session.get(Evaluation, evaluation_id)
+        if not ev:
+            raise HTTPException(status_code=404, detail="Evaluation not found")
+        
+        if payload.aiScore is not None:
+            ev.ai_initial_score = payload.aiScore
+        if payload.technicalScore is not None:
+            ev.technical_assessment = payload.technicalScore
+        if payload.researchScore is not None:
+            ev.research_evaluation = payload.researchScore
+        if payload.finalScore is not None:
+            ev.final_score = payload.finalScore
+        if payload.determination:
+            ev.determination = payload.determination
+        if payload.remarks:
+            ev.remarks = payload.remarks
+    
+    return {"success": True, "evaluation_id": evaluation_id}
+
+
+@app.get("/api/offers")
+async def get_offers(session: AsyncSession = Depends(get_db)):
+    """Get list of offers and onboarding status."""
+    result = await session.execute(
+        select(OfferOnboarding)
+        .options(selectinload(OfferOnboarding.selection).selectinload(Selection.candidate))
+        .order_by(OfferOnboarding.created_at.desc())
+    )
+    offers = result.scalars().all()
+    
+    response_data = []
+    for offer in offers:
+        if offer.selection and offer.selection.candidate:
+            response_data.append({
+                "id": offer.id,
+                "selection_id": offer.selection_id,
+                "candidate_id": offer.selection.candidate_id,
+                "candidate_name": f"{offer.selection.candidate.first_name} {offer.selection.candidate.last_name}",
+                "offered_position": offer.selection.offered_position,
+                "offered_salary": float(offer.selection.offered_salary) if offer.selection.offered_salary else 0,
+                "joining_date": offer.selection.joining_date.isoformat() if offer.selection.joining_date else None,
+                "offer_letter_date": offer.offer_letter_date.isoformat() if offer.offer_letter_date else None,
+                "offer_status": offer.offer_status,
+                "onboarding_status": offer.onboarding_status,
+                "remarks": offer.remarks,
+            })
+    
+    return response_data
+
+
+@app.get("/api/offers/{offer_id}")
+async def get_offer(offer_id: int, session: AsyncSession = Depends(get_db)):
+    """Get offer details."""
+    offer = await session.get(OfferOnboarding, offer_id, options=[selectinload(OfferOnboarding.selection)])
+    if not offer:
+        raise HTTPException(status_code=404, detail="Offer not found")
+    
+    return {
+        "id": offer.id,
+        "selection_id": offer.selection_id,
+        "offer_letter_date": offer.offer_letter_date.isoformat() if offer.offer_letter_date else None,
+        "offer_status": offer.offer_status,
+        "onboarding_status": offer.onboarding_status,
+        "joining_date": offer.selection.joining_date.isoformat() if offer.selection and offer.selection.joining_date else None,
+        "remarks": offer.remarks,
+    }
+
+
+@app.put("/api/offers/{offer_id}")
+async def update_offer(offer_id: int, payload: schemas.OfferUpdate, session: AsyncSession = Depends(get_db)):
+    """Update offer details."""
+    async with session.begin():
+        offer = await session.get(OfferOnboarding, offer_id)
+        if not offer:
+            raise HTTPException(status_code=404, detail="Offer not found")
+        
+        if payload.offer_status:
+            offer.offer_status = payload.offer_status
+        if payload.onboarding_status:
+            offer.onboarding_status = payload.onboarding_status  # Changed from onboarding_completed
+        if payload.remarks:
+            offer.remarks = payload.remarks
+    
+    return {"success": True, "offer_id": offer_id}
+
+
 @app.post("/api/offers")
 async def create_offer(payload: schemas.OfferCreate, session: AsyncSession = Depends(get_db)):
+    """Create a new offer for a selected candidate."""
+    # Get the candidate
     candidate = await session.get(Candidate, payload.candidateId)
     if not candidate:
         raise HTTPException(status_code=404, detail="Candidate not found")
-
-    offer = OfferOnboarding(
-        candidate_id=candidate.id,
-        position=payload.position,
-        salary=payload.salary,
-        joining_date=datetime.fromisoformat(payload.joiningDate).date(),
-        offer_doc_url="http://example.com/offer.pdf",
+    
+    # Find or create selection
+    sel_result = await session.execute(
+        select(Selection).where(Selection.candidate_id == payload.candidateId).order_by(Selection.created_at.desc()).limit(1)
     )
-
+    selection = sel_result.scalar_one_or_none()
+    
+    if not selection:
+        raise HTTPException(status_code=400, detail="No selection found for candidate")
+    
+    # Create offer
+    offer = OfferOnboarding(
+        selection_id=selection.id,
+        offer_letter_date=date.today(),
+        offer_status="Pending",
+        onboarding_status="Not Started",
+        joining_date=datetime.fromisoformat(payload.joiningDate).date() if payload.joiningDate else date.today(),
+    )
+    
     async with session.begin():
         session.add(offer)
-
+        await session.flush()
+    
     return {"success": True, "offer_id": offer.id}
+
+
+@app.delete("/api/offers/{offer_id}")
+async def delete_offer(offer_id: int, session: AsyncSession = Depends(get_db)):
+    """Delete an offer."""
+    async with session.begin():
+        offer = await session.get(OfferOnboarding, offer_id)
+        if not offer:
+            raise HTTPException(status_code=404, detail="Offer not found")
+        await session.delete(offer)
+    
+    return {"success": True}
+
+
+@app.get("/api/job-applications")
+async def get_job_applications(job_id: int = None, candidate_id: int = None, session: AsyncSession = Depends(get_db)):
+    """Get job applications with optional filters."""
+    query = select(JobApplication).options(selectinload(JobApplication.candidate), selectinload(JobApplication.job))
+    
+    if job_id:
+        query = query.where(JobApplication.job_id == job_id)
+    if candidate_id:
+        query = query.where(JobApplication.candidate_id == candidate_id)
+    
+    result = await session.execute(query.order_by(JobApplication.applied_date.desc()))
+    applications = result.scalars().all()
+    
+    return [
+        {
+            "id": app.id,
+            "job_id": app.job_id,
+            "candidate_id": app.candidate_id,
+            "candidate_name": f"{app.candidate.first_name} {app.candidate.last_name}" if app.candidate else "",
+            "job_title": app.job.position_name if app.job else "",
+            "application_status": app.application_status,
+            "ai_score": app.ai_score,
+            "skills_match": app.skills_match,
+            "research_score": app.research_score,
+            "applied_date": app.applied_date.isoformat() if app.applied_date else None,
+        }
+        for app in applications
+    ]
+
+
+@app.get("/api/job-applications/{application_id}")
+async def get_job_application(application_id: int, session: AsyncSession = Depends(get_db)):
+    """Get job application details."""
+    app = await session.get(JobApplication, application_id, options=[selectinload(JobApplication.candidate), selectinload(JobApplication.job)])
+    if not app:
+        raise HTTPException(status_code=404, detail="Job application not found")
+    
+    return {
+        "id": app.id,
+        "job_id": app.job_id,
+        "candidate_id": app.candidate_id,
+        "candidate_name": f"{app.candidate.first_name} {app.candidate.last_name}" if app.candidate else "",
+        "job_title": app.job.position_name if app.job else "",
+        "application_status": app.application_status,
+        "ai_score": app.ai_score,
+        "skills_match": app.skills_match,
+        "research_score": app.research_score,
+        "applied_date": app.applied_date.isoformat() if app.applied_date else None,
+    }
+
+
+@app.get("/api/skills")
+async def get_skills(session: AsyncSession = Depends(get_db)):
+    """Get all skills."""
+    result = await session.execute(select(Skill).order_by(Skill.skill_name))
+    skills = result.scalars().all()
+    
+    return [
+        {
+            "id": skill.id,
+            "skill_name": skill.skill_name,
+            "category": skill.category,
+        }
+        for skill in skills
+    ]
+
+
+@app.post("/api/skills")
+async def create_skill(payload: schemas.SkillCreate, session: AsyncSession = Depends(get_db)):
+    """Create a new skill."""
+    skill = Skill(skill_name=payload.skill_name, category=payload.category)
+    
+    async with session.begin():
+        session.add(skill)
+        await session.flush()
+    
+    return {"success": True, "skill_id": skill.id}
+
+
+@app.get("/api/research-papers")
+async def get_research_papers(candidate_id: int = None, session: AsyncSession = Depends(get_db)):
+    """Get research papers with optional candidate filter."""
+    query = select(ResearchPaper)
+    if candidate_id:
+        query = query.where(ResearchPaper.candidate_id == candidate_id)
+    
+    result = await session.execute(query.order_by(ResearchPaper.publication_year.desc()))
+    papers = result.scalars().all()
+    
+    return [
+        {
+            "id": paper.id,
+            "candidate_id": paper.candidate_id,
+            "title": paper.title,
+            "journal_name": paper.journal_name,
+            "publication_year": paper.publication_year,
+            "impact_factor": paper.impact_factor,
+            "citations": paper.citations,
+        }
+        for paper in papers
+    ]
+
+
+@app.post("/api/research-papers")
+async def create_research_paper(payload: schemas.ResearchPaperCreate, session: AsyncSession = Depends(get_db)):
+    """Create a new research paper entry."""
+    candidate = await session.get(Candidate, payload.candidate_id)
+    if not candidate:
+        raise HTTPException(status_code=404, detail="Candidate not found")
+    
+    paper = ResearchPaper(
+        candidate_id=payload.candidate_id,
+        title=payload.title,
+        journal_name=payload.journal_name,
+        publication_year=payload.publication_year,
+        impact_factor=payload.impact_factor,
+        citations=payload.citations,
+    )
+    
+    async with session.begin():
+        session.add(paper)
+        await session.flush()
+    
+    return {"success": True, "paper_id": paper.id}
+
+
+@app.delete("/api/research-papers/{paper_id}")
+async def delete_research_paper(paper_id: int, session: AsyncSession = Depends(get_db)):
+    """Delete a research paper."""
+    async with session.begin():
+        paper = await session.get(ResearchPaper, paper_id)
+        if not paper:
+            raise HTTPException(status_code=404, detail="Research paper not found")
+        await session.delete(paper)
+    
+    return {"success": True}
+
+
+@app.get("/api/notifications")
+async def get_notifications(recipient_email: str = None, is_read: bool = None, session: AsyncSession = Depends(get_db)):
+    """Get notifications with optional filters."""
+    query = select(Notification)
+    if recipient_email:
+        query = query.where(Notification.recipient_email == recipient_email)
+    if is_read is not None:
+        query = query.where(Notification.is_read == is_read)
+    
+    result = await session.execute(query.order_by(Notification.created_at.desc()))
+    notifications = result.scalars().all()
+    
+    return [
+        {
+            "id": notif.id,
+            "recipient_email": notif.recipient_email,
+            "subject": notif.subject,
+            "message": notif.message,
+            "notification_type": notif.notification_type,
+            "is_read": notif.is_read,
+            "created_at": notif.created_at.isoformat() if notif.created_at else None,
+        }
+        for notif in notifications
+    ]
+
+
+@app.post("/api/notifications")
+async def create_notification(payload: schemas.NotificationCreate, session: AsyncSession = Depends(get_db)):
+    """Create a new notification."""
+    notification = Notification(
+        recipient_email=payload.recipient_email,
+        subject=payload.subject,
+        message=payload.message,
+        notification_type=payload.notification_type,
+        related_entity_id=payload.related_entity_id,
+        is_read=False,
+    )
+    
+    async with session.begin():
+        session.add(notification)
+        await session.flush()
+    
+    return {"success": True, "notification_id": notification.id}
+
+
+@app.patch("/api/notifications/{notification_id}")
+async def mark_notification_read(notification_id: int, session: AsyncSession = Depends(get_db)):
+    """Mark notification as read."""
+    async with session.begin():
+        notif = await session.get(Notification, notification_id)
+        if not notif:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        notif.is_read = True
+        notif.read_at = datetime.utcnow()
+    
+    return {"success": True}
 

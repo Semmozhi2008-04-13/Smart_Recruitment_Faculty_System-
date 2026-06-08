@@ -3,33 +3,35 @@ import { apiPost } from '../services/api';
 import toast from 'react-hot-toast';
 
 export default function ScheduleInterviewModal({ onClose, onSuccess }) {
-  const [candidateId, setCandidateId] = useState('');
-  const [jobId, setJobId] = useState('');
-  const [interviewType, setInterviewType] = useState('');
+  const [candidateNameInput, setCandidateNameInput] = useState('');
+  const [positionNameInput, setPositionNameInput] = useState('');
   const [interviewDate, setInterviewDate] = useState('');
-  const [interviewRound, setInterviewRound] = useState(1);
-  const [interviewers, setInterviewers] = useState('');
-  const [mode, setMode] = useState('online');
-  const [meetingLink, setMeetingLink] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [panelInput, setPanelInput] = useState(''); // Renamed state to track panel
+  const [venueInput, setVenueInput] = useState(''); // New state for dynamic venue
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
-  const [scheduledInterview, setScheduledInterview] = useState(null);
 
   const candidateName = useMemo(() => {
-    // Backend currently returns IDs only here; keep a readable placeholder.
-    if (!candidateId) return '-';
-    return `Candidate #${candidateId}`;
-  }, [candidateId]);
+    return candidateNameInput.trim() || '-';
+  }, [candidateNameInput]);
+
+  const jobName = useMemo(() => {
+    return positionNameInput.trim() || '-';
+  }, [positionNameInput]);
 
   const panelistNames = useMemo(() => {
-    if (!interviewers) return '-';
-    const cleaned = interviewers
+    if (!panelInput) return '-';
+    const cleaned = panelInput
       .split(',')
       .map((s) => s.trim())
       .filter(Boolean);
     return cleaned.length ? cleaned.join(', ') : '-';
-  }, [interviewers]);
+  }, [panelInput]);
+
+  const venueName = useMemo(() => {
+    return venueInput.trim() || 'CIT Campus (TBD)';
+  }, [venueInput]);
 
   const formatDateTime = (isoLike) => {
     try {
@@ -44,7 +46,7 @@ export default function ScheduleInterviewModal({ onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!candidateId || !jobId || !interviewType || !interviewDate) {
+    if (!candidateNameInput || !positionNameInput || !interviewDate) {
       toast.error('Please fill in all required fields');
       return;
     }
@@ -52,22 +54,22 @@ export default function ScheduleInterviewModal({ onClose, onSuccess }) {
     setIsSubmitting(true);
     try {
       const res = await apiPost('/api/interviews', {
-        candidateId: Number(candidateId),
-        jobId: Number(jobId),
-        interviewType,
+        candidateId: 999, 
+        candidateName: candidateNameInput, 
+        jobId: 999,        
+        positionName: positionNameInput,   
+        interviewType: 'Interview',
         interviewDate,
-        interviewRound: Number(interviewRound),
-        interviewers,
-        mode,
-        meetingLink,
+        interviewRound: 1,
+        interviewers: panelInput, // Sending panel inputs to the original key
+        mode: 'offline', 
+        venue: venueName, // Added venue to payload
+        meetingLink: '', 
       });
 
-      // Show the required summary pop-up/dropdown
-      setScheduledInterview(res);
       setShowSummary(true);
       toast.success('Interview scheduled');
-
-      if (onSuccess) onSuccess();
+      if (onSuccess) onSuccess(res);
     } catch (err) {
       toast.error('Failed to schedule interview');
     } finally {
@@ -76,20 +78,18 @@ export default function ScheduleInterviewModal({ onClose, onSuccess }) {
   };
 
   const summary = useMemo(() => {
-    const venue = mode === 'offline' ? 'CIT Campus (TBD)' : 'Online (Teams)';
-    const roomNumber = mode === 'offline' ? 'Room TBD' : 'N/A';
-
     return [
       { label: 'Date/time', value: formatDateTime(interviewDate) },
       { label: 'Candidate name', value: candidateName },
       { label: 'Interview panelist name', value: panelistNames },
-      { label: 'Room number', value: roomNumber },
-      { label: 'Venue', value: venue },
+      { label: 'Room number', value: 'Room TBD' },
+      { label: 'Venue', value: venueName }, // Reflects the custom typed venue
       { label: 'Email sent to the respective candidate', value: 'Pending (email integration not enabled)' },
       { label: 'Reference sent to the interview panelist', value: 'Pending (reference integration not enabled)' },
       { label: 'Updation for next interview schedulings', value: 'Updated (UI) - backend integration pending' },
+      { label: 'Job role', value: jobName },
     ];
-  }, [candidateName, interviewDate, panelistNames, mode]);
+  }, [candidateName, interviewDate, panelistNames, venueName, jobName]);
 
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-50">
@@ -110,9 +110,7 @@ export default function ScheduleInterviewModal({ onClose, onSuccess }) {
           <div className="space-y-3">
             <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
               <div className="text-sm font-bold text-gray-800 mb-2">Interview Schedule Summary</div>
-              <div className="text-xs text-gray-600 mb-3">
-                This summary reflects the scheduled interview details.
-              </div>
+              <div className="text-xs text-gray-600 mb-3">This summary reflects the scheduled interview details.</div>
 
               <div className="space-y-2">
                 {summary.map((item) => (
@@ -129,7 +127,6 @@ export default function ScheduleInterviewModal({ onClose, onSuccess }) {
                 type="button"
                 onClick={() => {
                   setShowSummary(false);
-                  setScheduledInterview(null);
                 }}
                 className="px-4 py-2 border border-gray-300 rounded text-sm hover:bg-gray-100"
               >
@@ -147,29 +144,23 @@ export default function ScheduleInterviewModal({ onClose, onSuccess }) {
         ) : (
           <form onSubmit={handleSubmit} className="space-y-3">
             <input
-              type="number"
-              placeholder="Candidate ID"
-              value={candidateId}
-              onChange={(e) => setCandidateId(e.target.value)}
+              type="text"
+              placeholder="Candidate name"
+              value={candidateNameInput}
+              onChange={(e) => setCandidateNameInput(e.target.value)}
               className="w-full border border-gray-300 rounded px-3 py-2"
               required
             />
-            <input
-              type="number"
-              placeholder="Job ID"
-              value={jobId}
-              onChange={(e) => setJobId(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              required
-            />
+
             <input
               type="text"
-              placeholder="Interview Type"
-              value={interviewType}
-              onChange={(e) => setInterviewType(e.target.value)}
+              placeholder="Position name"
+              value={positionNameInput}
+              onChange={(e) => setPositionNameInput(e.target.value)}
               className="w-full border border-gray-300 rounded px-3 py-2"
               required
             />
+
             <input
               type="datetime-local"
               placeholder="Interview Date & Time"
@@ -178,36 +169,25 @@ export default function ScheduleInterviewModal({ onClose, onSuccess }) {
               className="w-full border border-gray-300 rounded px-3 py-2"
               required
             />
-            <input
-              type="number"
-              placeholder="Round"
-              value={interviewRound}
-              onChange={(e) => setInterviewRound(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-              min="1"
-            />
+
+            {/* Changed placeholder to Panel */}
             <input
               type="text"
-              placeholder="Interviewers (comma separated)"
-              value={interviewers}
-              onChange={(e) => setInterviewers(e.target.value)}
+              placeholder="Panel (comma separated)"
+              value={panelInput}
+              onChange={(e) => setPanelInput(e.target.value)}
               className="w-full border border-gray-300 rounded px-3 py-2"
             />
-            <select
-              value={mode}
-              onChange={(e) => setMode(e.target.value)}
-              className="w-full border border-gray-300 rounded px-3 py-2"
-            >
-              <option value="online">Online</option>
-              <option value="offline">Offline</option>
-            </select>
+
+            {/* New Venue entry field */}
             <input
-              type="url"
-              placeholder="Meeting Link"
-              value={meetingLink}
-              onChange={(e) => setMeetingLink(e.target.value)}
+              type="text"
+              placeholder="Venue (e.g., CIT Campus, Conference Room A)"
+              value={venueInput}
+              onChange={(e) => setVenueInput(e.target.value)}
               className="w-full border border-gray-300 rounded px-3 py-2"
             />
+
             <div className="flex justify-end space-x-2 pt-2">
               <button
                 type="button"
@@ -230,4 +210,3 @@ export default function ScheduleInterviewModal({ onClose, onSuccess }) {
     </div>
   );
 }
-
