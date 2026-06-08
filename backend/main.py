@@ -27,6 +27,10 @@ from backend.models import (
 )
 import schemas as schemas
 
+from routes import auth
+app.include_router(auth.router, prefix="/api")
+
+
 
 class JobCreateRequest(BaseModel):
     jobTitle: str
