@@ -9,10 +9,6 @@ import {
 export default function FeedbackandDecisions() {
     const [popup, setPopup] = useState(null);
     const [finalDecision, setFinalDecision] = useState("");
-    const handleSendToHR = () => {
-        if (!selectedCandidate || !finalDecision) return;
-        setPopup(`Decision (${finalDecision}) for ${selectedCandidate.candidate} has been sent to HR.`);
-    };
 
     const [globalFilter, setGlobalFilter] = useState('');
     const [columnFilters, setColumnFilters] = useState([]);
@@ -21,15 +17,12 @@ export default function FeedbackandDecisions() {
     // Added pageIndex state to control pagination
     const [pageIndex, setPageIndex] = useState(0);
 
-    const data = useMemo(() => [
-        { candidate: 'Dr. Reena Sen', dept: 'Computer Science', role: 'Assoc. Prof', recommendation: 'Strong Recommend', decision: 'Sent to HR' },
-        { candidate: 'Robert Kane', dept: 'Mathematics', role: 'Prof', recommendation: 'Recommended', decision: 'Waitlisted' },
-        { candidate: 'Dr. Atkin Barne', dept: 'Chemistry', role: 'Prof', recommendation: 'Neutral', decision: 'Pending' },
-        { candidate: 'Ms. Joly Mariam', dept: 'Physics', role: 'Assoc. Prof', recommendation: 'Recommended', decision: 'Waitlisted' },
-        { candidate: 'Dr. Liam Chen', dept: 'Information Technology', role: 'Asst. Prof', recommendation: 'Strong Recommend', decision: 'Sent to HR' },
-    ], []);
+    const [data, setData] = useState([]);
 
-    const [pageData, setPageData] = useState(data);
+    const handleSendToHR = () => {
+        if (!selectedCandidate || !finalDecision) return;
+        setPopup(`Decision (${finalDecision}) for ${selectedCandidate.candidate} has been sent to HR.`);
+    };
 
     const getInitials = (name) => {
         const parts = name.replace(/(Dr\.|Ms\.|Mr\.|Mrs\.|Prof\.)/gi, '').trim().split(' ');
@@ -99,7 +92,7 @@ export default function FeedbackandDecisions() {
     ], []);
 
     const table = useReactTable({
-        data: pageData,
+        data,
         columns,
         getCoreRowModel: getCoreRowModel(),
         getPaginationRowModel: getPaginationRowModel(),
@@ -116,17 +109,13 @@ export default function FeedbackandDecisions() {
     // Loading Simulation Effect
     useEffect(() => {
         setLoading(true);
+        // call api service
         const timer = setTimeout(() => {
-            // Page 0 has data, pages 1 and 2 (indices 1 & 2) are "empty" for simulation
-            if (pageIndex === 0) {
-                setPageData(data);
-            } else {
-                setPageData([]);
-            }
+            //setdata(apiResult)
             setLoading(false);
         }, 800);
         return () => clearTimeout(timer);
-    }, [pageIndex, data]);
+    }, [pageIndex]);
 
     return (
         <div className="p-8 bg-slate-50 min-h-screen">
@@ -135,9 +124,9 @@ export default function FeedbackandDecisions() {
 
             {/* KPI Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <KPICard title="Candidates Reviewed" value="22" icon={Users} variant="reviewed" />
-                <KPICard title="Finalized Decisions" value="19" icon={CircleCheck} variant="final-decision" />
-                <KPICard title="Pending Decisions" value="3" icon={CircleEllipsis} variant="pending-decision" />
+                <KPICard title="Candidates Reviewed" value="0" icon={Users} variant="reviewed" />
+                <KPICard title="Finalized Decisions" value="0" icon={CircleCheck} variant="final-decision" />
+                <KPICard title="Pending Decisions" value="0" icon={CircleEllipsis} variant="pending-decision" />
             </div>
 
             {/* Main Content */}

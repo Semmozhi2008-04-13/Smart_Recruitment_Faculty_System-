@@ -5,7 +5,13 @@ import { Paperclip, Send } from 'lucide-react';
 const PanelCollaboration = () => {
     const { state } = useLocation();
     const navigate = useNavigate();
-    const candidate = state?.candidate;
+
+    const candidate = state?.candidate || {
+        candidate: "Dr. Placeholder Name",
+        id: "000",
+        dept: "Department",
+        time: "00:00 - 00:00"
+    };
 
     // Logic: Name-only initials
     const getInitials = (name) => {
@@ -20,23 +26,22 @@ const PanelCollaboration = () => {
     const [notes, setNotes] = useState("");
     const [popup, setPopup] = useState(null);
     const [postedNotes, setPostedNotes] = useState([
-        { name: "Dr. Aris Thorne", role: "Senior Faculty", text: "Dr. Sen's presentation on LLMs was exceptionally clear.", tag: "Teaching Focus" }
+        // { name: "Dr. Aris Thorne", role: "Senior Faculty", text: "Dr. Sen's presentation on LLMs was exceptionally clear.", tag: "Teaching Focus" }
     ]);
 
     const handlePostNote = () => {
-    // If empty, use '--', otherwise use the text provided
-    const noteContent = notes.trim() === "" ? "--" : notes;
+        const noteContent = notes.trim() === "" ? "--" : notes;
 
-    setPostedNotes([...postedNotes, { 
-        name: "You", 
-        role: "Interviewer", 
-        text: noteContent, 
-        tag: "Observation" 
-    }]);
+        setPostedNotes([...postedNotes, {
+            name: "You",
+            role: "Interviewer",
+            text: noteContent,
+            tag: "Observation"
+        }]);
 
-    setNotes(""); // Clears the textarea
-    setPopup("Note Posted Successfully!");
-};
+        setNotes(""); // Clears the textarea
+        setPopup("Note Posted Successfully!");
+    };
 
     if (!candidate) return <div className="p-10">No candidate selected.</div>;
 
@@ -53,14 +58,14 @@ const PanelCollaboration = () => {
                     </div>
                 </div>
                 <button onClick={() => setPopup("Panel: Dr. Aris Thorne, Prof. David Chen, Dr. Sarah Lee, Dr. John Doe, Dr. Ray")} className="bg-purple-50 text-purple-700 px-4 py-2 rounded-full text-sm font-bold border border-purple-200">
-                    5 Members ● In Discussion
+                    - Members ● -
                 </button>
             </header>
 
             <div className="grid grid-cols-3 gap-6">
                 <div className="col-span-2 space-y-4">
                     <h2 className="font-bold border-b-2 border-blue-600 inline-block pb-1">Panel Discussion & Shared Notes</h2>
-                    
+
                     {postedNotes.map((n, i) => (
                         <div key={i} className="bg-white p-4 rounded-lg border">
                             <div className="flex justify-between mb-2">
@@ -74,8 +79,8 @@ const PanelCollaboration = () => {
                     <div className="bg-white p-4 rounded-lg border border-dashed border-gray-300">
                         <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className="w-full text-sm outline-none h-20" placeholder="Type your notes here..." />
                         <div className="flex justify-between items-center mt-4">
-                            <button className="text-sm text-gray-500 flex items-center gap-2"><Paperclip size={16}/> Attach</button>
-                            <button onClick={handlePostNote} className="bg-blue-900 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2"><Send size={16}/> Post Note</button>
+                            <button className="text-sm text-gray-500 flex items-center gap-2"><Paperclip size={16} /> Attach</button>
+                            <button onClick={handlePostNote} className="bg-blue-900 text-white px-6 py-2 rounded-lg text-sm font-bold flex items-center gap-2"><Send size={16} /> Post Note</button>
                         </div>
                     </div>
                 </div>
@@ -83,13 +88,13 @@ const PanelCollaboration = () => {
                 <div className="space-y-6">
                     <div onClick={() => setPopup("Consensus Status: High Agreement reached among 4 of 5 panel members.")} className="bg-blue-900 text-white p-6 rounded-xl cursor-pointer hover:bg-blue-800 transition">
                         <p className="text-xs uppercase opacity-75">Panel Consensus Status</p>
-                        <p className="text-2xl font-bold my-2">4/5 Submitted</p>
+                        <p className="text-2xl font-bold my-2"> -/- Submitted</p>
                         <div className="bg-blue-800 py-2 rounded text-center text-sm font-bold">High Agreement</div>
                     </div>
 
                     <div className="bg-white p-6 rounded-xl border">
                         <p className="text-sm font-bold mb-4">Average Panel Rating</p>
-                        <p className="text-4xl font-bold text-blue-900">4.7<span className="text-lg text-gray-400">/5.0</span></p>
+                        <p className="text-4xl font-bold text-blue-900">-<span className="text-lg text-gray-400">/-</span></p>
                     </div>
 
                     <button onClick={() => setPopup("Panel Discussion has been finalized.")} className="w-full bg-blue-900 text-white py-3 rounded-lg font-bold">Finalize Panel Decision</button>

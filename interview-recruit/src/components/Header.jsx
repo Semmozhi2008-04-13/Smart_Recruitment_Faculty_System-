@@ -39,7 +39,7 @@ export default function Header({ toggleSidebar }) {
     }
 
     const routeMatches = [
-      { keywords: ['dashboard', 'home'], path: '/dashboard' },
+      { keywords: ['dashboard', 'home'], path: '/interviewdashboard' },
       { keywords: ['assignedinterviews', 'interview', 'interviews'], path: '/assignedinterviews' },
       { keywords: ['schedule', 'interview', 'interviewschedule'], path: '/interviewschedule' },
       { keywords: ['candidateprofile', 'candidate', 'profile'], path: '/candidateprofile' },
@@ -123,7 +123,7 @@ export default function Header({ toggleSidebar }) {
         <div className="flex items-center gap-3 shrink-0">
           {/* Text Information */}
           <div className="hidden sm:flex flex-col items-end">
-            <span className="text-sm font-semibold text-gray-800">Dr. Sharma</span>
+            <span className="text-sm font-semibold text-gray-800">You</span>
             <span className="text-[11px] text-gray-500">Senior Interviewer</span>
           </div>
 

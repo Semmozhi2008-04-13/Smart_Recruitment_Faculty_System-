@@ -28,7 +28,7 @@
 /*KPI CARDS FOR DASHBOARD*/
 
 .kpi-cards.assigned{
-  background-color: #d3e2f1;
+  background-color: #b2d5f8;
 }
 .kpi-icon-container.assigned{
   color: #3b82f6;
@@ -42,7 +42,7 @@
 }
 
 .kpi-cards.progress{
-  background-color: #eadbf8;
+  background-color: #e0c8f7;
 }
 .kpi-icon-container.progress{
   color: #6B46C1;
@@ -55,6 +55,12 @@
   color: #d97706;
 }
 
+.kpi-cards.pending-eval{
+  background-color: #ffd5d5;
+}
+.kpi-icon-container.pending-eval{
+  color: #d11c1c;
+}
 
 /*===================================================*/
 

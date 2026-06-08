@@ -2,26 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { Info, RotateCcw } from 'lucide-react';
 
-// Centralized lookup for extra candidate details
-const CANDIDATE_DETAILS = {
-    "Dr. Reena Sen": {
-        education: "PhD, IIT Kanpur",
-        experience: "8+ Years",
-        room: "MR - 402",
-        time: "11:30 - 12:30"
-    },
-    "John Doe": {
-        education: "MSc, MIT",
-        experience: "5+ Years",
-        room: "MR - 403",
-        time: "12:30 - 01:30"
-    }
-};
+const CANDIDATE_DETAILS = {};
 
 const EvaluationForms = () => {
     const { state } = useLocation();
     const navigate = useNavigate();
-    const candidate = state?.candidate || null ;
+
+    const candidate = state?.candidate || {
+        candidate: "Placeholder Name",
+        dept: "Sample Department",
+        id: "000"
+    };
 
     // Get details from lookup, fallback to defaults
     const details = candidate? (CANDIDATE_DETAILS[candidate?.candidate] || {
@@ -31,20 +22,20 @@ const EvaluationForms = () => {
         time: "TBA"
     }) : null;
 
-    if (!candidate) {
-        return (
-            <div className="max-w-5xl mx-auto p-12 text-center">
-                <h2 className="text-xl font-bold">No Candidate Selected</h2>
-                <p className="text-gray-600 mt-2">Please go to the Interview Schedule to start an evaluation.</p>
-                <button 
-                    onClick={() => navigate('/interviewschedule')} 
-                    className="mt-6 px-6 py-2 bg-blue-900 text-white rounded-lg"
-                >
-                    Go to Schedule
-                </button>
-            </div>
-        );
-    }
+    // if (!candidate) {
+    //     return (
+    //         <div className="max-w-5xl mx-auto p-12 text-center">
+    //             <h2 className="text-xl font-bold">No Candidate Selected</h2>
+    //             <p className="text-gray-600 mt-2">Please go to the Interview Schedule to start an evaluation.</p>
+    //             <button 
+    //                 onClick={() => navigate('/interviewschedule')} 
+    //                 className="mt-6 px-6 py-2 bg-blue-900 text-white rounded-lg"
+    //             >
+    //                 Go to Schedule
+    //             </button>
+    //         </div>
+    //     );
+    // }
 
     const [loading, setLoading] = useState(true);
     const [scores, setScores] = useState({});
@@ -54,7 +45,6 @@ const EvaluationForms = () => {
     const [selectedRec, setSelectedRec] = useState(null);
 
     useEffect(() => {
-        // Simple loading delay to match your app's behavior
         const timer = setTimeout(() => setLoading(false), 800);
         return () => clearTimeout(timer);
     }, []);

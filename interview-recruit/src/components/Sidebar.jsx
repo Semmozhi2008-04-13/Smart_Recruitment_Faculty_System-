@@ -8,7 +8,7 @@ const Sidebar = ({ isOpen, closeSidebar, onLogout }) => {
     `${navItemBase} ${isActive ? 'bg-purple-100 text-purple-800 font-bold' : 'text-gray-600 hover:text-gray-900 hover:bg-purple-50'}`;
 
   const navLinks = [
-    { to: "/dashboard", icon: "dashboard", label: "Dashboard" },
+    { to: "/interviewdashboard", icon: "dashboard", label: "Dashboard" },
     { to: "/assignedinterviews", icon: "assignment_ind", label: "Assigned Interviews" },
     { to: "/interviewschedule", icon: "calendar_today", label: "Interview Schedule" },
     { to: "/candidateprofile", icon: "badge", label: "Candidate Profiles" },

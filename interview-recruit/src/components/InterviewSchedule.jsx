@@ -6,13 +6,7 @@ import {
     flexRender,
 } from '@tanstack/react-table';
 
-const ALL_CANDIDATES = [
-    { candidate: 'Ms. Joly Mariam', role: 'Assoc. Prof', dept: 'Physics', venue: 'MR - 204', status: 'Completed', date: '2026-06-01' },
-    { candidate: 'Dr. Atkin Barne', role: 'Professor', dept: 'Chemistry', venue: 'MR - 104', status: 'Completed', date: '2026-06-03' },
-    { candidate: 'Dr. Liam Chen', role: 'Asst. Prof', dept: 'Information Technology', venue: 'MR - 302', status: 'Completed', date: '2026-06-05' },
-    { candidate: 'Dr. Reena Sen', role: 'Assoc. Prof', dept: 'Computer Science', venue: 'MR - 402', status: 'Ongoing', date: '2026-06-06' },
-    { candidate: 'Dr. Senthil K', role: 'Professor', dept: 'Mechanical Engineering', venue: 'MR - 304', status: 'Upcoming', date: '2026-06-08' },
-];
+const ALL_CANDIDATES = [];
 
 export default function InterviewSchedule() {
 
@@ -29,7 +23,6 @@ export default function InterviewSchedule() {
     const [resultPopup, setResultPopup] = useState(null);
 
     const data = useMemo(() => {
-        if (pageIndex > 0) return [];
         return ALL_CANDIDATES.filter(item => {
             const matchesRole = roleFilter ? item.role === roleFilter : true;
             const matchesDept = deptFilter ? item.dept === deptFilter : true;

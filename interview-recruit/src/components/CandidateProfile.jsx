@@ -10,14 +10,8 @@ const CandidateProfile = () => {
 
     useEffect(() => {
         if (candidate) {
-            if (candidate.name === "Dr. Reena Sen") {
-                setLoading(false);
-            } else {
-                const timer = setTimeout(() => setLoading(false), 1500);
-                return () => clearTimeout(timer);
-            }
-        } else {
-            setLoading(false);
+            const timer = setTimeout(() => setLoading(false), 1500);
+            return () => clearTimeout(timer);
         }
     }, [candidate]);
 
@@ -27,22 +21,14 @@ const CandidateProfile = () => {
             {loading ? (
                 <div className="animate-pulse bg-gray-100 h-16 w-full rounded"></div>
             ) : !candidate ? (
-                <p className="text-gray-400 text-sm italic">Please select a candidate.</p>
-            ) : candidate.name === "Dr. Reena Sen" ? (
+                <p className="text-gray-400 text-sm italic">Please select a candidate to view details.</p>
+            ) : children ? (
                 children
             ) : (
                 <p className="text-gray-500 text-sm italic">No records as of now</p>
             )}
         </div>
     );
-
-    const researchTopics = [
-        "Advanced Machine Learning",
-        "Neural Networks Architectures",
-        "NLP Deep Dive",
-        "Robotics Ethics",
-        "Bayesian Inference"
-    ];
 
     return (
 
@@ -65,24 +51,15 @@ const CandidateProfile = () => {
 
                 {/* Left Column: 2/3 Width */}
                 <div className="lg:col-span-2 space-y-6">
-                    <ProfileSegment title="Professional Summary">
-                        <p className="text-gray-600 text-sm leading-relaxed">Award-winning researcher specializing in Large Language Models and Reinforcement Learning, Dr. Sen has led major research initiatives, focusing on ethical AI development and scalable neural architectures.</p>
-                    </ProfileSegment>
+                    <ProfileSegment title="Professional Summary" />
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <ProfileSegment title="Education">
-                            <p className="text-gray-600 text-sm leading-relaxed">PhD in Computer Science @ IIT Kanpur</p>
-                            <p className="text-blue-600 text-sm leading-relaxed">2012 - 2016 • Focus: Neural Networks</p>
-                        </ProfileSegment>
+                        <ProfileSegment title="Education" />
                         <ProfileSegment title="Experience" />
                     </div>
 
                     <ProfileSegment title="Teaching & Research Focus" />
-                    <ProfileSegment title="Publications">
-                        <p className="text-gray-600 text-sm leading-relaxed">1. Deep Residual Learning for Image Recognition </p>
-                        <p className="text-gray-600 text-sm leading-relaxed">2. Language Models are Few-Shot Learners</p>
-                        <p className="text-gray-600 text-sm leading-relaxed">3. Auto-Encoding Variational Bayes (ICLR)</p>
-                    </ProfileSegment>
+                    <ProfileSegment title="Publications" />
                 </div>
 
                 {/* Right Column: 1/3 Width Sidebar */}

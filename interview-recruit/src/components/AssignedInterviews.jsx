@@ -11,31 +11,24 @@ const AssignedInterviews = () => {
   const [deptFilter, setDeptFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
 
-  const allInterviews = [
-    { name: 'Dr. Sonia Singh', dept: 'Mathematics', role: 'Associate Professor', time: '09:00 AM', venue: 'Main Hall S1', status: 'Completed', action: 'Review' },
-    { name: 'Dr. Liam Chen', dept: 'Information Technology', role: 'Assistant Professor', time: '10:00 AM', venue: 'Meeting Room - 302', status: 'Completed', action: 'Review' },
-    { name: 'Dr. Reena Sen', dept: 'Computer Science', role: 'Professor', time: '11:30 AM', venue: 'Meeting Room - 402', status: 'Ongoing', action: 'Profile' },
-    { name: 'Dr. Priya P', dept: 'Mechanical Engg', role: 'Professor', time: '12:30 PM', venue: 'Meeting Room - 202', status: 'Pending', action: 'Profile' },
-  ];
+  const [allInterviews] = useState([]);
+  const itemsPerPage = 5;
 
   const handleAction = (item) => {
     if (item.action === 'Profile') {
-      // Navigates to the profile page and passes the candidate data via state
       navigate('/candidateprofile', { state: { candidate: item } });
-    } else {
-      console.log('Review action clicked for:', item.name);
-    }
+    } 
   };
 
   const dynamicTimeline = [...allInterviews].sort((a, b) => a.time.localeCompare(b.time));
 
-  useEffect(() => {
-    if (currentPage > 1) {
-      setIsLoading(true);
-      const timer = setTimeout(() => setIsLoading(false), 1200);
-      return () => clearTimeout(timer);
-    }
-  }, [currentPage]);
+  // useEffect(() => {
+  //   if (currentPage > 1) {
+  //     setIsLoading(true);
+  //     const timer = setTimeout(() => setIsLoading(false), 1200);
+  //     return () => clearTimeout(timer);
+  //   }
+  // }, [currentPage]);
 
   const filteredData = allInterviews.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -44,7 +37,16 @@ const AssignedInterviews = () => {
     return matchesSearch && matchesDept && matchesStatus;
   });
 
-  const getInitials = (fullName) => fullName.replace(/^(Dr\.|Prof\.|Mr\.|Ms\.|Mrs\.)\s+/i, '').split(' ').map(n => n[0]).join('').toUpperCase();
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+
+  useEffect(() => {
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, [currentPage, searchTerm, deptFilter, statusFilter]);
+
 
   return (
     <div className="flex flex-col gap-3 p-3">
@@ -118,6 +120,36 @@ const AssignedInterviews = () => {
                 )) : <tr><td colSpan="6" className="p-20 text-center text-gray-500 italic">No records found as of now</td></tr>}
               </tbody>
             </table>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center justify-between p-4 border-t bg-gray-50">
+              <span className="text-xs text-gray-500">Page {currentPage} of 3</span>
+              <div className="flex gap-2">
+                <button 
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => p - 1)}
+                  className="p-1 border rounded disabled:opacity-50 hover:bg-white"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+                {[1, 2, 3].map(page => (
+                  <button 
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`px-3 py-1 text-xs border rounded ${currentPage === page ? 'bg-blue-600 text-white' : 'bg-white'}`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button 
+                  disabled={currentPage === 3}
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  className="p-1 border rounded disabled:opacity-50 hover:bg-white"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -158,3 +190,11 @@ const AssignedInterviews = () => {
 };
 
 export default AssignedInterviews;
+
+
+
+
+
+
+
+

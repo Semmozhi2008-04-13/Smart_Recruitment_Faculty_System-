@@ -5,12 +5,12 @@ import {
 import { Calendar, CircleEllipsis, Hourglass,  Search } from 'lucide-react';
 import KPICard from './reusable/KPICards';
 
-const MOCK_DATA = [
-    { id: 1, name: 'Dr. Sonia Singh', dept: 'Mathematics', role: 'Associate Professor', dateTime: '2026-06-06 09:00 AM', status: 'Completed', initial: 'SS', avatarBg: 'bg-blue-50 text-blue-600', statusClass: 'bg-green-100 text-green-800' },
-    { id: 2, name: 'Dr. Liam Chen', dept: 'Information Tech', role: 'Assistant Professor', dateTime: '2026-06-06 10:00 AM', status: 'Completed', initial: 'LC', avatarBg: 'bg-blue-50 text-blue-600', statusClass: 'bg-green-100 text-green-800' },
-    { id: 3, name: 'Dr. Reena Sen', dept: 'Computer Science', role: 'Professor', dateTime: '2026-06-06 11:30 AM', status: 'Ongoing', initial: 'RS', avatarBg: 'bg-blue-50 text-blue-600', statusClass: 'bg-blue-100 text-blue-800' },
-    { id: 4, name: 'Dr. Priya P', dept: 'Mechanical Engg', role: 'Professor', dateTime: '2026-06-06 12:30 PM', status: 'Pending', initial: 'PP', avatarBg: 'bg-blue-50 text-blue-600', statusClass: 'bg-gray-100 text-gray-400' },
-];
+// const MOCK_DATA = [
+//     { id: 1, name: 'Dr. Sonia Singh', dept: 'Mathematics', role: 'Associate Professor', dateTime: '2026-06-06 09:00 AM', status: 'Completed', initial: 'SS', avatarBg: 'bg-blue-50 text-blue-600', statusClass: 'bg-green-100 text-green-800' },
+//     { id: 2, name: 'Dr. Liam Chen', dept: 'Information Tech', role: 'Assistant Professor', dateTime: '2026-06-06 10:00 AM', status: 'Completed', initial: 'LC', avatarBg: 'bg-blue-50 text-blue-600', statusClass: 'bg-green-100 text-green-800' },
+//     { id: 3, name: 'Dr. Reena Sen', dept: 'Computer Science', role: 'Professor', dateTime: '2026-06-06 11:30 AM', status: 'Ongoing', initial: 'RS', avatarBg: 'bg-blue-50 text-blue-600', statusClass: 'bg-blue-100 text-blue-800' },
+//     { id: 4, name: 'Dr. Priya P', dept: 'Mechanical Engg', role: 'Professor', dateTime: '2026-06-06 12:30 PM', status: 'Pending', initial: 'PP', avatarBg: 'bg-blue-50 text-blue-600', statusClass: 'bg-gray-100 text-gray-400' },
+// ];
 
 const Dashboard = () => {
     const [pageIndex, setPageIndex] = useState(0);
@@ -19,14 +19,8 @@ const Dashboard = () => {
     const [statusFilter, setStatusFilter] = useState('All');
 
     const data = useMemo(() => {
-        if (pageIndex > 0) return [];
-        return MOCK_DATA.filter(item => {
-            const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
-            const matchesDate = dateFilter ? item.dateTime.includes(dateFilter) : true;
-            const matchesStatus = statusFilter === 'All' || item.status === statusFilter;
-            return matchesSearch && matchesDate && matchesStatus;
-        });
-    }, [pageIndex, search, dateFilter, statusFilter]);
+        return [];
+    }, []);
 
     const columns = useMemo(() => [
         { accessorKey: 'name', header: 'Candidate Name', cell: info => (
@@ -52,9 +46,9 @@ const Dashboard = () => {
 
             {/* KPI Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                <KPICard title="Total Assigned" value="30" icon={Calendar} variant="assigned" />
-                <KPICard title="Pending Evaluations" value="3" icon={Hourglass} variant="pending-eval" />
-                <KPICard title="Progress" value="22" icon={CircleEllipsis} variant="progress" />
+                <KPICard title="Total Assigned" value="0" icon={Calendar} variant="assigned" />
+                <KPICard title="Pending Evaluations" value="0" icon={Hourglass} variant="pending-eval" />
+                <KPICard title="Progress" value="0" icon={CircleEllipsis} variant="progress" />
             </div>
 
             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
