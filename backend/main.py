@@ -10,8 +10,8 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime, timedelta
 
-from backend.backend.database.connection import get_db, engine, Base, AsyncSessionLocal
-from backend.backend.models import (
+from backend.database.connection import get_db, engine, Base, AsyncSessionLocal
+from backend.models import (
     Job,
     Candidate,
     JobApplication,
@@ -25,7 +25,7 @@ from backend.backend.models import (
     InterviewPanel,
     Notification,
 )
-from backend import schemas
+import schemas as schemas
 
 
 class JobCreateRequest(BaseModel):
