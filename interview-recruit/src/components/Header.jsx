@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import citLogo from '../assets/cit-logo.png';
+import { User } from 'lucide-react';
 
 export default function Header({ toggleSidebar }) {
   const navigate = useNavigate();
@@ -95,7 +96,7 @@ export default function Header({ toggleSidebar }) {
 
       </div>
 
-      {/* CENTER ZONE: [Search Bar] centered smoothly in the middle track layout space */}
+      {/*[Search Bar] centered smoothly in the middle track layout space */}
       <form className="flex-1 max-w-xs md:max-w-sm mx-4" onSubmit={handleSearchSubmit}>
         <div className="relative w-full">
           <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-xl">
@@ -128,7 +129,7 @@ export default function Header({ toggleSidebar }) {
           </div>
 
           <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-800 items-center justify-center font-bold text-xs shadow-xs select-none shrink-0 hidden sm:flex">
-            DS
+              <User size={18} strokeWidth={2} />
           </div>
         </div>
        </div>
