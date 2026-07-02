@@ -8,7 +8,7 @@ from drf_yasg import openapi
 
 # Import viewsets
 from ai_matching.views import AIMatchingViewSet
-from interviews.views import InterviewViewSet
+from interviews.views import InterviewViewSet, InterviewPanelViewSet
 from evaluation.views import EvaluationViewSet
 from selection.views import SelectionViewSet
 from offers.views import OfferViewSet
@@ -16,6 +16,7 @@ from offers.views import OfferViewSet
 router = DefaultRouter()
 router.register(r'ai-matching', AIMatchingViewSet, basename='ai-matching')
 router.register(r'interviews', InterviewViewSet, basename='interviews')
+router.register(r'interview-panels', InterviewPanelViewSet, basename='interview-panels')
 router.register(r'evaluation', EvaluationViewSet, basename='evaluation')
 router.register(r'selection', SelectionViewSet, basename='selection')
 router.register(r'offers', OfferViewSet, basename='offers')
@@ -32,7 +33,6 @@ schema_view = get_schema_view(
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
-    path('api/auth/', include('accounts.urls')),
     path('api/jobs/', include('jobs.urls')),
     path('api/candidates/', include('candidates.urls')),
     path('api/applications/', include('applications.urls')),

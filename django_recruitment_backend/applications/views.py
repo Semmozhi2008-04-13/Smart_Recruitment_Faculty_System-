@@ -5,24 +5,15 @@ from .serializers import ApplicationSerializer
 
 class ApplicationListView(generics.ListCreateAPIView):
     serializer_class = ApplicationSerializer
-    permission_classes = (permissions.IsAuthenticated,)
+    permission_classes = (permissions.AllowAny,)
     
     def get_queryset(self):
-        user = self.request.user
-        if user.user_type == 'applicant':
-            return Application.objects.filter(applicant=user)
         return Application.objects.all()
     
     def perform_create(self, serializer):
-        serializer.save(applicant=self.request.user)
+        serializer.save()
 
 class ApplicationDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Application.objects.all()
     serializer_class = ApplicationSerializer
-    permission_classes = (permissions.IsAuthenticated,)
-    
-    def update(self, request, *args, **kwargs):
-        if request.user.user_type == 'applicant':
-            return Response({'error': 'Applicants cannot update applications'},
-                          status=status.HTTP_403_FORBIDDEN)
-        return super().update(request, *args, **kwargs)
+    permission_classes = (permissions.AllowAny,)
